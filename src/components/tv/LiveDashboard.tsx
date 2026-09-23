@@ -225,21 +225,29 @@ function VotePanel({
     >
       <div
         className={`shrink-0 rounded-2xl bg-white p-[0.6rem] ${
-          compact ? "w-[9rem] lg:w-[13rem]" : "w-[95%] max-w-[30rem]"
+          compact ? "w-[8rem] lg:w-[11rem]" : "w-[95%] max-w-[30rem]"
         }`}
         dangerouslySetInnerHTML={{ __html: vote.svg }}
       />
-      <div className={compact ? "min-w-0" : ""}>
-        <div className="text-[1.6rem] leading-tight font-extrabold">Scan to vote!</div>
+      <div className={compact ? "min-w-0 flex-1" : ""}>
+        <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[1.35rem]" : "text-[1.6rem]"}`}>
+          Scan to vote!
+        </div>
         <div className="text-[0.95rem] font-semibold text-gold">
           {openCategories.map((c) => CATEGORY_LABEL[c]).join(" & ")} voting is open
         </div>
-        <div className="mt-[0.3rem] text-[0.9rem] text-muted">
-          Your vote counts for {100 - judgeWeight}% of the final score
-        </div>
-        <div className={`mt-[0.6rem] text-[2.4rem] leading-none font-extrabold text-gold transition-transform ${pulse ? "scale-110" : ""}`}>
+        {!compact && (
+          <div className="mt-[0.3rem] text-[0.9rem] text-muted">
+            Your vote counts for {100 - judgeWeight}% of the final score
+          </div>
+        )}
+        <div
+          className={`mt-[0.6rem] leading-none font-extrabold whitespace-nowrap text-gold transition-transform ${
+            compact ? "text-[2rem]" : "text-[2.4rem]"
+          } ${pulse ? "scale-110" : ""}`}
+        >
           <AnimatedNumber value={voteTotal} decimals={0} />
-          <span className="ml-2 text-[1rem] font-semibold text-muted">votes cast</span>
+          <span className="ml-2 text-[0.95rem] font-semibold text-muted">votes cast</span>
         </div>
       </div>
     </section>
