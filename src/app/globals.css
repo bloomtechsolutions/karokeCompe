@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: #1a0710;
+  --color-panel: #2a0d1b;
+  --color-panel-2: #3a1426;
+  --color-line: #5a2340;
+  --color-ink: #fbeef4;
+  --color-muted: #d3a9bd;
+  --color-accent: #e0356f;
+  --color-accent-2: #f472a0;
+  --color-gold: #f2c46d;
+  --font-sans: var(--font-poppins);
+  --font-script: var(--font-script);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -200px, #6d1537 0%, transparent 70%),
+    var(--color-bg);
+  color: var(--color-ink);
+  min-height: 100dvh;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@utility field {
+  @apply w-full rounded-lg border border-line bg-bg/60 px-3 py-2.5 text-ink placeholder:text-muted/60 focus:border-accent-2 focus:outline-none;
+}
+
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-accent text-white hover:bg-accent-2;
+}
+
+@utility btn-ghost {
+  @apply btn border border-line text-ink hover:bg-panel-2;
+}
+
+@utility card {
+  @apply rounded-2xl border border-line bg-panel/80 p-4 sm:p-5;
+}
