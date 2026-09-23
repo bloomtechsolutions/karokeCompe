@@ -64,7 +64,7 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
 ### 1. Supabase
 
 1. Create a Supabase project.
-2. Run `supabase/migrations/20260923000000_init.sql`, either in the SQL editor or with `supabase db push`.
+2. Run the files in `supabase/migrations` in order, either in the SQL editor or with `supabase db push`.
 3. Under **Authentication → Sign In / Providers**, turn off *Allow new users to sign up*. Judges are created from the admin panel.
 
 ### 2. Environment variables
