@@ -51,3 +51,210 @@ textarea {
 @utility card {
   @apply rounded-2xl border border-line bg-panel/80 p-4 sm:p-5;
 }
+
+/* ------------------------------------------------------------------ */
+/* TV dashboard                                                        */
+/* ------------------------------------------------------------------ */
+
+/* Scale all rem-based sizes with the screen on large displays (TVs). */
+@media (min-width: 1024px) {
+  :root:has(.tv-root) {
+    font-size: clamp(14px, 1.02vw, 34px);
+  }
+}
+
+html.tv-idle,
+html.tv-idle * {
+  cursor: none !important;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.beam {
+  position: absolute;
+  top: -20vh;
+  width: 30vw;
+  height: 140vh;
+  background: linear-gradient(to bottom, rgb(244 114 160 / 0.22), transparent 70%);
+  filter: blur(30px);
+  transform-origin: top center;
+  animation: beam-sweep 14s ease-in-out infinite alternate;
+}
+
+@keyframes beam-sweep {
+  from {
+    transform: rotate(-18deg);
+  }
+  to {
+    transform: rotate(18deg);
+  }
+}
+
+.float-note {
+  position: absolute;
+  bottom: -10vh;
+  color: rgb(244 114 160 / 0.25);
+  animation: float-up linear infinite;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120vh) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(242 196 109 / 0.15) 0%,
+    rgb(242 196 109 / 0.55) 50%,
+    rgb(242 196 109 / 0.15) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.row-flash {
+  animation: row-flash 1.8s ease-out;
+}
+
+@keyframes row-flash {
+  0% {
+    background-color: rgb(242 196 109 / 0.35);
+    box-shadow: 0 0 0 2px rgb(242 196 109 / 0.8);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(224 53 111 / 0.45), 0 0 40px rgb(224 53 111 / 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgb(224 53 111 / 0), 0 0 70px rgb(224 53 111 / 0.45);
+  }
+}
+
+.bounce-dot {
+  animation: bounce-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes bounce-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-30%);
+    opacity: 1;
+  }
+}
+
+.pop-in {
+  animation: pop-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.banner-in {
+  animation: banner-in 6s ease-in-out both;
+}
+
+@keyframes banner-in {
+  0% {
+    transform: translate(-50%, -150%);
+    opacity: 0;
+  }
+  8%,
+  88% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -150%);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: absolute;
+  top: -5vh;
+  width: 0.6rem;
+  height: 1.1rem;
+  border-radius: 2px;
+  animation: confetti-fall linear infinite;
+}
+
+@keyframes confetti-fall {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(115vh) rotate(720deg);
+  }
+}
+
+.podium-rise {
+  animation: podium-rise 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: bottom;
+}
+
+@keyframes podium-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam,
+  .float-note,
+  .shimmer,
+  .glow-pulse,
+  .bounce-dot,
+  .confetti {
+    animation: none;
+  }
+}

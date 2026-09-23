@@ -56,6 +56,7 @@ export default async function JudgePage() {
           <StageBadge stage={settings.stage} />
         </div>
 
+        {scoring && <AutoRefresh seconds={10} />}
         {scoring ? (
           contestants.length === 0 ? (
             <p className="card text-center text-sm text-muted">No performers in this round yet.</p>
@@ -67,6 +68,7 @@ export default async function JudgePage() {
                 song={round === "final" ? c.song_final : c.song_round1}
                 order={round === "final" ? c.final_order : c.performance_order}
                 existing={scores.get(c.id) ?? null}
+                onStage={c.id === settings.now_performing}
               />
             ))
           )

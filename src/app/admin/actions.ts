@@ -53,7 +53,7 @@ export async function setStage(formData: FormData) {
   if (!STAGES.includes(stage)) fail("Invalid stage.");
   const before = await getSettings();
   const supabase = await createClient();
-  const patch: { stage: Stage; voting_open?: boolean } = { stage };
+  const patch: { stage: Stage; voting_open?: boolean; now_performing: null } = { stage, now_performing: null };
   if (stage !== "final") patch.voting_open = false;
   const { error } = await supabase.from("settings").update(patch).eq("id", 1);
   if (error) fail(error.message);
@@ -93,6 +93,41 @@ export async function updateSettings(formData: FormData) {
   if (error) fail(error.message, "settings");
   await audit("settings_update", "settings", "1", patch);
   done("Settings saved.", "settings");
+}
+
+// ---------------------------------------------------------------------------
+// On stage (TV spotlight)
+// ---------------------------------------------------------------------------
+
+export async function setOnStage(formData: FormData) {
+  await requireAdmin();
+  const id = optStr(formData, "id");
+  const supabase = await createClient();
+  const { error } = await supabase.from("settings").update({ now_performing: id }).eq("id", 1);
+  if (error) fail(error.message);
+  done(id ? "Performer is on stage." : "Stage cleared.");
+}
+
+export async function nextOnStage() {
+  await requireAdmin();
+  const settings = await getSettings();
+  if (settings.stage !== "round1" && settings.stage !== "final") fail("Start a round first.");
+  const isFinal = settings.stage === "final";
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("contestants").select("id, name, performance_order, final_order, is_finalist");
+  if (error) fail(error.message);
+  type Row = { id: string; name: string; performance_order: number | null; final_order: number | null; is_finalist: boolean };
+  const order = (c: Row) => (isFinal ? c.final_order : c.performance_order) ?? 999;
+  const queue = ((data ?? []) as Row[])
+    .filter((c) => !isFinal || c.is_finalist)
+    .sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
+  if (queue.length === 0) fail("No performers in this round.");
+  const idx = queue.findIndex((c) => c.id === settings.now_performing);
+  const next = queue[idx + 1];
+  if (!next) fail("That was the last performer. Use Clear when they finish.");
+  const { error: upErr } = await supabase.from("settings").update({ now_performing: next.id }).eq("id", 1);
+  if (upErr) fail(upErr.message);
+  done(`${next.name} is on stage.`);
 }
 
 // ---------------------------------------------------------------------------

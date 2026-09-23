@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import QRCode from "qrcode";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Header, NavLink } from "@/components/Header";
-import { FinalBoard } from "@/components/Leaderboards";
+import { FinalBoard } from "@/components/tv/Boards";
 import { StageBadge } from "@/components/StageBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
-import { fmt, rankFinal, rankRound1 } from "@/lib/scoring";
+import { getVoteLink } from "@/lib/qr";
+import { fmt, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import {
   CATEGORIES,
@@ -25,9 +24,11 @@ import {
   clearData,
   createJudge,
   deleteContestant,
+  nextOnStage,
   resetJudgePassword,
   saveContestant,
   setJudgeActive,
+  setOnStage,
   setStage,
   setVoting,
   toggleFinalist,
@@ -120,6 +121,7 @@ export default async function AdminPage({
             stage={settings.stage}
             votingOpen={settings.voting_open}
             voteTotal={voteTotal}
+            nowPerforming={settings.now_performing}
             contestants={contestants}
             judges={activeJudges}
             scores={scores}
@@ -184,11 +186,12 @@ export default async function AdminPage({
                 <FinalBoard
                   key={c}
                   category={c}
-                  rows={rankFinal(rows, c, judgeWeight)}
+                  rows={rows}
                   judgeCount={activeJudges.length}
                   judgeWeight={judgeWeight}
                   showScores
                   votingOpen={false}
+                  nowPerforming={settings.now_performing}
                 />
               ))}
             </div>
@@ -285,6 +288,7 @@ async function ControlTab({
   stage,
   votingOpen,
   voteTotal,
+  nowPerforming,
   contestants,
   judges,
   scores,
@@ -292,18 +296,21 @@ async function ControlTab({
   stage: Stage;
   votingOpen: boolean;
   voteTotal: number;
+  nowPerforming: string | null;
   contestants: Contestant[];
   judges: Profile[];
   scores: Score[];
 }) {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const voteUrl = `${proto}://${host}/vote`;
-  const qr = await QRCode.toString(voteUrl, { type: "svg", margin: 1, width: 220 });
+  const { url: voteUrl, svg: qr } = await getVoteLink();
 
   const round = stage === "final" ? "final" : "round1";
   const inRound = contestants.filter((c) => round === "round1" || c.is_finalist);
+  const queue = [...inRound].sort(
+    (a, b) =>
+      ((round === "final" ? a.final_order : a.performance_order) ?? 999) -
+        ((round === "final" ? b.final_order : b.performance_order) ?? 999) || a.name.localeCompare(b.name),
+  );
+  const onStageNow = contestants.find((c) => c.id === nowPerforming) ?? null;
   const expected = inRound.length * judges.length;
   const submitted = scores.filter(
     (s) => s.round === round && inRound.some((c) => c.id === s.contestant_id) && judges.some((j) => j.id === s.judge_id),
@@ -312,6 +319,61 @@ async function ControlTab({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <AutoRefresh seconds={10} />
+      {(stage === "round1" || stage === "final") && (
+        <section className="card space-y-3 md:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold">On stage</h2>
+              <p className="text-sm text-muted">Shown as a spotlight on the TV dashboard and highlighted for judges.</p>
+            </div>
+            <div className="flex gap-2">
+              <form action={nextOnStage}>
+                <SubmitButton className="btn-primary" pendingText="…">
+                  {onStageNow ? "Next performer ▶" : "Start with first ▶"}
+                </SubmitButton>
+              </form>
+              {onStageNow && (
+                <form action={setOnStage}>
+                  <input type="hidden" name="id" value="" />
+                  <SubmitButton className="btn-ghost" pendingText="…">
+                    Clear
+                  </SubmitButton>
+                </form>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl bg-bg/50 px-4 py-3">
+            {onStageNow ? (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎤</span>
+                <div className="min-w-0">
+                  <div className="truncate text-lg font-bold">{onStageNow.name}</div>
+                  <div className="truncate text-sm text-muted">
+                    {CATEGORY_LABEL[onStageNow.category]} ·{" "}
+                    {(round === "final" ? onStageNow.song_final : onStageNow.song_round1) ?? "Song TBA"}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <span className="text-sm text-muted">Nobody on stage.</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {queue.map((c) => (
+              <form key={c.id} action={setOnStage}>
+                <input type="hidden" name="id" value={c.id} />
+                <button
+                  className={`rounded-full px-3 py-1.5 text-sm ${
+                    c.id === nowPerforming ? "bg-accent font-semibold text-white" : "border border-line text-muted hover:bg-panel-2"
+                  }`}
+                >
+                  {(round === "final" ? c.final_order : c.performance_order) ?? "–"}. {c.name}
+                </button>
+              </form>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="card space-y-4">
         <h2 className="text-lg font-bold">Stage</h2>
         <div className="grid grid-cols-2 gap-2">

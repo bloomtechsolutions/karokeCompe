@@ -12,6 +12,7 @@ export type Settings = {
   show_scores: boolean;
   finalists_per_category: number;
   judge_weight: number;
+  now_performing: string | null;
 };
 
 export type Contestant = {

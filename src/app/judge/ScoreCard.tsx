@@ -11,22 +11,28 @@ type Props = {
   song: string | null;
   order: number | null;
   existing: Score | null;
+  onStage?: boolean;
 };
 
-export function ScoreCard({ contestant, song, order, existing }: Props) {
+export function ScoreCard({ contestant, song, order, existing, onStage = false }: Props) {
   const [state, action] = useActionState<SaveScoreState, FormData>(saveScore, {});
   const [values, setValues] = useState<Record<CriterionKey, number>>(() => {
     const v = {} as Record<CriterionKey, number>;
     for (const c of CRITERIA) v[c.key] = existing ? existing[c.key] : 0;
     return v;
   });
-  const [open, setOpen] = useState(!existing);
+  const [open, setOpen] = useState(!existing || onStage);
   const [dirty, setDirty] = useState(false);
   const total = CRITERIA.reduce((s, c) => s + values[c.key], 0);
   const saved = (existing != null || state.ok) && !dirty;
 
   return (
-    <article className={`card ${saved ? "border-emerald-700/60" : ""}`}>
+    <article
+      className={`card ${onStage ? "border-accent-2 ring-2 ring-accent-2/60" : saved ? "border-emerald-700/60" : ""}`}
+    >
+      {onStage && (
+        <div className="mb-3 text-xs font-bold tracking-[0.25em] text-accent-2 uppercase">🎤 On stage now</div>
+      )}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

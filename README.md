@@ -4,7 +4,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 
 | Page | Who | Login |
 | --- | --- | --- |
-| `/` Dashboard | Everyone: live leaderboards, rules, judging criteria | No |
+| `/` Dashboard | Everyone, built for a TV: live leaderboards, "now on stage" spotlight, voting QR, winners podium | No |
 | `/vote` Audience vote | Audience during the final | No (one vote per device per category) |
 | `/judge` Scoring | Judges | Yes |
 | `/admin` Organiser panel | Organiser | Yes |
@@ -34,6 +34,17 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 **Audience voting without login.** Each device gets an anonymous, HttpOnly cookie, and the database allows one vote per cookie per category. Someone who clears their cookies or uses a second phone could vote again. For stricter voting, turn on **Require staff ID to vote** in Settings: each staff ID can then vote only once per category.
 
 **Hide scores.** Turn off *Show scores on public dashboard* to keep results secret until the announcement. The organiser can still see everything.
+
+## TV dashboard
+
+Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cursor and button hide after a few seconds, and the screen is kept awake. The page refreshes every few seconds and changes with the stage:
+
+- **Registration** – "Starting soon" with the line-up.
+- **1st Round / Final** – live leaderboards with animated scores and reordering, the final cut line, and a banner when a category gets a new leader.
+  - To show a *Now on stage* spotlight, use **Live control → On stage** (or **Next performer ▶**) in the admin panel.
+  - The spotlight fills in a dot as each judge submits, and reveals the judges' score once all of them have scored.
+- **Final with voting open** – a large QR code and a live count of votes cast.
+- **Completed** – winners' podiums with confetti.
 
 ## Security
 
