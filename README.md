@@ -5,7 +5,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 | Page | Who | Login |
 | --- | --- | --- |
 | `/` Dashboard | Everyone, built for a TV: live leaderboards, "now on stage" spotlight, voting QR, winners podium | No |
-| `/vote` Audience vote | Audience during the final | No (one vote per device per category) |
+| `/vote` Audience vote | Audience during the final | No (staff ID; one vote per staff ID and IP per category) |
 | `/judge` Scoring | Judges | Yes |
 | `/admin` Organiser panel | Organiser | Yes |
 
@@ -31,7 +31,12 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
    - The 70/30 split can be changed in Settings.
 5. Close voting, then set the stage to *Completed*. Vote counts appear on the public dashboard once voting is closed. Download a CSV of the results from *Results*.
 
-**Audience voting without login.** Each device gets an anonymous, HttpOnly cookie, and the database allows one vote per cookie per category. Someone who clears their cookies or uses a second phone could vote again. For stricter voting, turn on **Require staff ID to vote** in Settings: each staff ID can then vote only once per category.
+**Audience voting (no login).**
+- **Staff ID:** voters enter their staff ID, and each staff ID can vote once per category.
+- **IP address:** each vote is logged with the voter's IP, and a second vote from the same IP in a category is blocked. Phones on the same Wi-Fi share one public IP, so turn this off in Settings if the audience votes over the venue Wi-Fi.
+- **Device:** a second vote from the same browser is also blocked.
+- **Logging:** every vote and every blocked attempt is listed in *Admin → Votes*.
+- **When voting opens:** moving to the Final Round arms voting. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
 
 **Hide scores.** Turn off *Show scores on public dashboard* to keep results secret until the announcement. The organiser can still see everything.
 
@@ -53,7 +58,7 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
   - judges can only score the live round, and only finalists in the final
   - judges can only see their own scores
   - final song must differ from the 1st round song
-  - one vote per voter per category
+  - one vote per staff ID, IP address and device per category, only after all the category's finalists have performed
 - Only aggregates are public, through the `leaderboard()` function. Individual judges' scores and the vote table are never exposed to anonymous users.
 - Votes and judge-account creation go through server actions using the service-role key, which never reaches the browser.
 - Accounts not created by the organiser, such as public sign-ups, are inactive and have no access.

@@ -9,6 +9,7 @@ export type Settings = {
   stage: Stage;
   voting_open: boolean;
   require_voter_id: boolean;
+  block_repeat_ip: boolean;
   show_scores: boolean;
   finalists_per_category: number;
   judge_weight: number;

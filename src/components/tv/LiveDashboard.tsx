@@ -6,6 +6,7 @@ import { rankFinal, rankRound1 } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
+import { categoryVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
 import { TvChrome } from "./TvChrome";
 
@@ -27,7 +28,8 @@ export function LiveDashboard(props: DashboardProps) {
   const { stage, rows, showScores, nowPerforming } = props;
   const live = stage === "round1" || stage === "final";
   const onStage = live ? (rows.find((r) => r.contestant_id === nowPerforming) ?? null) : null;
-  const showVote = stage === "final" && props.votingOpen && props.vote != null;
+  const openCategories = CATEGORIES.filter((c) => categoryVoting(rows, c, nowPerforming).ready);
+  const showVote = stage === "final" && props.votingOpen && props.vote != null && openCategories.length > 0;
   const hasSide = onStage != null || showVote;
 
   return (
@@ -50,7 +52,7 @@ export function LiveDashboard(props: DashboardProps) {
             {hasSide && (
               <div className="flex min-h-0 flex-col gap-[1.2rem]">
                 {onStage && <Spotlight row={onStage} {...props} />}
-                {showVote && <VotePanel {...props} compact={onStage != null} />}
+                {showVote && <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />}
               </div>
             )}
             {CATEGORIES.map((c) =>
@@ -129,7 +131,7 @@ function TopBar({ eventName, stage, votingOpen, voteTotal }: DashboardProps) {
         {rest.length > 0 && <span className="font-script text-[2.6rem] text-accent-2">{rest.join(" ")}</span>}
       </div>
       <div className="flex flex-wrap items-center gap-[0.8rem]">
-        {stage === "final" && votingOpen && (
+        {stage === "final" && votingOpen && voteTotal > 0 && (
           <span
             className={`hidden items-center gap-2 rounded-full border border-gold/50 bg-gold/10 px-[1rem] py-[0.4rem] text-[1rem] font-semibold text-gold transition-transform sm:inline-flex ${
               votePulse ? "scale-110" : ""
@@ -206,7 +208,13 @@ function Spotlight({
   );
 }
 
-function VotePanel({ vote, voteTotal, judgeWeight, compact }: DashboardProps & { compact: boolean }) {
+function VotePanel({
+  vote,
+  voteTotal,
+  judgeWeight,
+  compact,
+  openCategories,
+}: DashboardProps & { compact: boolean; openCategories: Category[] }) {
   const pulse = useFlash(voteTotal, 1200);
   if (!vote) return null;
   return (
@@ -221,6 +229,9 @@ function VotePanel({ vote, voteTotal, judgeWeight, compact }: DashboardProps & {
       />
       <div className={compact ? "min-w-0" : ""}>
         <div className="text-[1.6rem] leading-tight font-extrabold">Scan to vote!</div>
+        <div className="text-[0.95rem] font-semibold text-gold">
+          {openCategories.map((c) => CATEGORY_LABEL[c]).join(" & ")} voting is open
+        </div>
         <div className="mt-[0.3rem] text-[0.9rem] text-muted">
           Your vote counts for {100 - judgeWeight}% of the final score
         </div>

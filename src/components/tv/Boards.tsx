@@ -2,6 +2,7 @@
 
 import { fmt, rankFinal, rankRound1, type FinalResult, type Round1Result } from "@/lib/scoring";
 import { CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types";
+import { categoryVoting } from "@/lib/voting";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { AutoScroll } from "./AutoScroll";
 import { useFlash, useFlip } from "./hooks";
@@ -182,6 +183,7 @@ function FinalRow({
   judgeWeight,
   showScores,
   votingOpen,
+  votingReady,
   onStage,
   displayRank,
 }: {
@@ -190,6 +192,7 @@ function FinalRow({
   judgeWeight: number;
   showScores: boolean;
   votingOpen: boolean;
+  votingReady: boolean;
   onStage: boolean;
   displayRank: number | null;
 }) {
@@ -239,7 +242,11 @@ function FinalRow({
             </span>
             <span>
               <span className="text-gold">■</span> Audience{" "}
-              {votingOpen ? "voting now…" : `${fmt(r.audiencePoints, 1)}/${audienceWeight}`}
+              {votingOpen
+                ? votingReady
+                  ? "voting now…"
+                  : "after all perform"
+                : `${fmt(r.audiencePoints, 1)}/${audienceWeight}`}
               {!votingOpen && r.votes != null ? ` · ${r.votes} votes` : ""}
             </span>
           </div>
@@ -266,6 +273,7 @@ export function FinalBoard({
   votingOpen: boolean;
   nowPerforming: string | null;
 }) {
+  const voting = categoryVoting(rows, category, nowPerforming);
   const ranked = showScores
     ? rankFinal(rows, category, judgeWeight)
     : rankFinal(
@@ -278,7 +286,17 @@ export function FinalBoard({
   return (
     <BoardShell
       title={`${CATEGORY_LABEL[category]} Final`}
-      subtitle={`Judges ${judgeWeight}% · Audience ${100 - judgeWeight}%`}
+      subtitle={
+        votingOpen ? (
+          voting.ready ? (
+            <span className="font-semibold text-gold">🗳 Audience voting open</span>
+          ) : (
+            `${voting.performed}/${voting.total} performed · voting opens after`
+          )
+        ) : (
+          `Judges ${judgeWeight}% · Audience ${100 - judgeWeight}%`
+        )
+      }
     >
       {ranked.length === 0 ? (
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Finalists to be announced…</p>
@@ -293,6 +311,7 @@ export function FinalBoard({
                   judgeWeight={judgeWeight}
                   showScores={showScores}
                   votingOpen={votingOpen}
+                  votingReady={voting.ready}
                   onStage={r.contestant_id === nowPerforming}
                   displayRank={showScores ? (r.finalScore != null ? r.rank : null) : (r.final_order ?? null)}
                 />

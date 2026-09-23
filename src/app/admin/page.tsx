@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { getVoteLink } from "@/lib/qr";
+import { categoryVoting } from "@/lib/voting";
 import { fmt, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -14,6 +15,7 @@ import {
   CATEGORY_LABEL,
   STAGE_LABEL,
   type Contestant,
+  type LeaderboardRow,
   type Profile,
   type Score,
   type Stage,
@@ -42,6 +44,7 @@ const TABS = [
   { id: "results", label: "Results" },
   { id: "contestants", label: "Performers" },
   { id: "judges", label: "Judges" },
+  { id: "votes", label: "Votes" },
   { id: "settings", label: "Settings" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -122,6 +125,7 @@ export default async function AdminPage({
             votingOpen={settings.voting_open}
             voteTotal={voteTotal}
             nowPerforming={settings.now_performing}
+            rows={rows}
             contestants={contestants}
             judges={activeJudges}
             scores={scores}
@@ -207,6 +211,8 @@ export default async function AdminPage({
 
         {tab === "judges" && <JudgesTab judges={judges} scores={scores} contestants={contestants} />}
 
+        {tab === "votes" && <VotesTab contestants={contestants} />}
+
         {tab === "settings" && (
           <div className="grid gap-4 md:grid-cols-2">
             <form action={updateSettings} className="card space-y-4">
@@ -256,8 +262,22 @@ export default async function AdminPage({
                 <span>
                   <span className="block text-sm font-medium">Require staff ID to vote</span>
                   <span className="block text-xs text-muted">
-                    Stronger one-person-one-vote: each staff ID can vote once per category, on top of the
-                    one-vote-per-device check.
+                    Each staff ID can vote once per category.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="block_repeat_ip"
+                  defaultChecked={settings.block_repeat_ip}
+                  className="mt-1 h-5 w-5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">Block repeat votes from the same IP address</span>
+                  <span className="block text-xs text-amber-300">
+                    Phones on the same Wi-Fi share one IP, so only the first person on that Wi-Fi could vote.
+                    Keep this on only if the audience votes over mobile data.
                   </span>
                 </span>
               </label>
@@ -289,6 +309,7 @@ async function ControlTab({
   votingOpen,
   voteTotal,
   nowPerforming,
+  rows,
   contestants,
   judges,
   scores,
@@ -297,6 +318,7 @@ async function ControlTab({
   votingOpen: boolean;
   voteTotal: number;
   nowPerforming: string | null;
+  rows: LeaderboardRow[];
   contestants: Contestant[];
   judges: Profile[];
   scores: Score[];
@@ -436,7 +458,36 @@ async function ControlTab({
             {votingOpen ? "Close voting" : "Open voting"}
           </SubmitButton>
         </form>
-        {stage !== "final" && <p className="text-xs text-muted">Voting can be opened during the Final Round.</p>}
+        {stage !== "final" ? (
+          <p className="text-xs text-muted">
+            Voting is armed automatically when you move to the Final Round.
+          </p>
+        ) : (
+          <ul className="space-y-1.5 text-sm">
+            {CATEGORIES.map((c) => {
+              const v = categoryVoting(rows, c, nowPerforming);
+              return (
+                <li key={c} className="flex items-center justify-between rounded-lg bg-bg/50 px-3 py-2">
+                  <span className="font-medium">{CATEGORY_LABEL[c]}</span>
+                  <span
+                    className={
+                      !votingOpen ? "text-muted" : v.ready ? "font-semibold text-emerald-300" : "text-amber-300"
+                    }
+                  >
+                    {!votingOpen
+                      ? "Closed"
+                      : v.ready
+                        ? "Voting open"
+                        : `Waiting · ${v.performed}/${v.total} performed`}
+                  </span>
+                </li>
+              );
+            })}
+            <li className="text-xs text-muted">
+              Each category opens by itself once all its finalists have been scored and left the stage.
+            </li>
+          </ul>
+        )}
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-3 text-bg sm:flex-row">
           <div className="h-[180px] w-[180px] shrink-0" dangerouslySetInnerHTML={{ __html: qr }} />
           <div className="text-center text-sm sm:text-left">
@@ -630,6 +681,92 @@ function JudgesTab({
           </section>
         ),
       )}
+    </div>
+  );
+}
+
+const VOTE_RESULT_LABEL: Record<string, string> = {
+  closed: "Voting closed",
+  invalid: "Invalid",
+  not_ready: "Category not open yet",
+  voter_id_required: "No staff ID",
+  already_voted: "Same device",
+  voter_id_used: "Staff ID already voted",
+  ip_used: "IP already voted",
+};
+
+async function VotesTab({ contestants }: { contestants: Contestant[] }) {
+  const supabase = await createClient();
+  const [votesRes, attemptsRes] = await Promise.all([
+    supabase
+      .from("audience_votes")
+      .select("id, contestant_id, category, voter_ref, voter_ip, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("vote_attempts")
+      .select("id, contestant_id, category, voter_ref, voter_ip, result, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+  ]);
+  type VoteRow = {
+    id: string | number;
+    contestant_id: string | null;
+    category: string | null;
+    voter_ref: string | null;
+    voter_ip: string | null;
+    created_at: string;
+    result?: string;
+  };
+  const votes = (votesRes.data ?? []) as VoteRow[];
+  const attempts = (attemptsRes.data ?? []) as VoteRow[];
+  const names = new Map(contestants.map((c) => [c.id, c.name]));
+  const time = (t: string) =>
+    new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  const table = (rows: VoteRow[], blocked: boolean) => (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th className="py-2 pr-3 font-medium">Time</th>
+            <th className="py-2 pr-3 font-medium">Staff ID</th>
+            <th className="py-2 pr-3 font-medium">IP address</th>
+            <th className="py-2 pr-3 font-medium">Category</th>
+            <th className="py-2 pr-3 font-medium">{blocked ? "Tried to vote for" : "Voted for"}</th>
+            {blocked && <th className="py-2 font-medium">Blocked because</th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line/60">
+          {rows.map((v) => (
+            <tr key={v.id}>
+              <td className="py-2 pr-3 whitespace-nowrap tabular-nums">{time(v.created_at)}</td>
+              <td className="py-2 pr-3 font-medium">{v.voter_ref ?? "—"}</td>
+              <td className="py-2 pr-3 font-mono text-xs">{v.voter_ip ?? "—"}</td>
+              <td className="py-2 pr-3">{v.category ? CATEGORY_LABEL[v.category as "solo" | "duet"] : "—"}</td>
+              <td className="py-2 pr-3">{(v.contestant_id && names.get(v.contestant_id)) ?? "—"}</td>
+              {blocked && (
+                <td className="py-2 text-amber-300">{VOTE_RESULT_LABEL[v.result ?? ""] ?? v.result}</td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <AutoRefresh seconds={10} />
+      <section className="card">
+        <h2 className="mb-1 text-lg font-bold">Votes ({votes.length})</h2>
+        <p className="mb-3 text-xs text-muted">Only you can see who voted. The public dashboard shows totals only.</p>
+        {votes.length === 0 ? <p className="text-sm text-muted">No votes yet.</p> : table(votes, false)}
+      </section>
+      <section className="card">
+        <h2 className="mb-3 text-lg font-bold">Blocked attempts ({attempts.length})</h2>
+        {attempts.length === 0 ? <p className="text-sm text-muted">No blocked attempts.</p> : table(attempts, true)}
+      </section>
     </div>
   );
 }

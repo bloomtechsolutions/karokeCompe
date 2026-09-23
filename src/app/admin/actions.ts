@@ -53,8 +53,13 @@ export async function setStage(formData: FormData) {
   if (!STAGES.includes(stage)) fail("Invalid stage.");
   const before = await getSettings();
   const supabase = await createClient();
-  const patch: { stage: Stage; voting_open?: boolean; now_performing: null } = { stage, now_performing: null };
-  if (stage !== "final") patch.voting_open = false;
+  // Entering the final arms audience voting; each category then opens by
+  // itself once all its finalists have performed.
+  const patch: { stage: Stage; voting_open: boolean; now_performing: null } = {
+    stage,
+    voting_open: stage === "final",
+    now_performing: null,
+  };
   const { error } = await supabase.from("settings").update(patch).eq("id", 1);
   if (error) fail(error.message);
   await audit("stage_change", "settings", "1", { from: before.stage, to: stage });
@@ -85,6 +90,7 @@ export async function updateSettings(formData: FormData) {
     event_name: str(formData, "event_name") || "Karaoke Competition",
     show_scores: formData.get("show_scores") === "on",
     require_voter_id: formData.get("require_voter_id") === "on",
+    block_repeat_ip: formData.get("block_repeat_ip") === "on",
     finalists_per_category: finalists,
     judge_weight: judgeWeight,
   };
@@ -123,11 +129,13 @@ export async function nextOnStage() {
     .sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
   if (queue.length === 0) fail("No performers in this round.");
   const idx = queue.findIndex((c) => c.id === settings.now_performing);
-  const next = queue[idx + 1];
-  if (!next) fail("That was the last performer. Use Clear when they finish.");
-  const { error: upErr } = await supabase.from("settings").update({ now_performing: next.id }).eq("id", 1);
+  const next = queue[idx + 1] ?? null;
+  const { error: upErr } = await supabase
+    .from("settings")
+    .update({ now_performing: next?.id ?? null })
+    .eq("id", 1);
   if (upErr) fail(upErr.message);
-  done(`${next.name} is on stage.`);
+  done(next ? `${next.name} is on stage.` : "All performers done. Stage cleared.");
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +286,8 @@ export async function clearData(formData: FormData) {
   if (what === "votes" || what === "all") {
     const { error } = await admin.from("audience_votes").delete().not("id", "is", null);
     if (error) fail(error.message, "settings");
+    const attempts = await admin.from("vote_attempts").delete().not("id", "is", null);
+    if (attempts.error) fail(attempts.error.message, "settings");
   }
   if (what === "scores" || what === "all") {
     const { error } = await admin.from("scores").delete().not("id", "is", null);
