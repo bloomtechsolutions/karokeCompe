@@ -224,7 +224,9 @@ function VotePanel({
       }`}
     >
       <div
-        className={`shrink-0 rounded-2xl bg-white p-[0.5rem] ${compact ? "w-[8rem] lg:w-[10.5rem]" : "w-[15rem]"}`}
+        className={`shrink-0 rounded-2xl bg-white p-[0.6rem] ${
+          compact ? "w-[9rem] lg:w-[13rem]" : "w-[95%] max-w-[30rem]"
+        }`}
         dangerouslySetInnerHTML={{ __html: vote.svg }}
       />
       <div className={compact ? "min-w-0" : ""}>
@@ -239,7 +241,6 @@ function VotePanel({
           <AnimatedNumber value={voteTotal} decimals={0} />
           <span className="ml-2 text-[1rem] font-semibold text-muted">votes cast</span>
         </div>
-        {!compact && <div className="mt-[0.5rem] text-[0.8rem] break-all text-muted/70">{vote.url}</div>}
       </div>
     </section>
   );
