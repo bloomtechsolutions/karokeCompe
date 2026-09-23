@@ -14,7 +14,7 @@ const MESSAGES: Record<string, string> = {
   voter_id_required: "Please enter your staff ID to vote.",
   already_voted: "You have already voted in this category from this device.",
   voter_id_used: "This staff ID has already voted in this category.",
-  ip_used: "A vote in this category has already been cast from this network connection.",
+  ip_used: "A vote in this category has already been casted by you. Thankyou",
 };
 
 /** Client IP as seen by Vercel's edge (which overwrites any client-supplied value). */
