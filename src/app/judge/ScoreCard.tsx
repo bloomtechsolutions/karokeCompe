@@ -1,34 +1,85 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CRITERIA, type CriterionKey } from "@/lib/scoring";
-import { CATEGORY_LABEL, type Contestant, type Score } from "@/lib/types";
+import { CATEGORY_LABEL, type Contestant, type Round, type Score } from "@/lib/types";
 import { saveScore, type SaveScoreState } from "./actions";
 
 type Props = {
   contestant: Contestant;
+  round: Round;
   song: string | null;
   order: number | null;
   existing: Score | null;
   onStage?: boolean;
+  missed?: boolean;
 };
 
-export function ScoreCard({ contestant, song, order, existing, onStage = false }: Props) {
+type Values = Record<CriterionKey, number>;
+
+// Unsubmitted scores are kept on the device so they survive the page
+// switching to the next performer or a reload.
+function readDraft(key: string): Values | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Values) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, values: Values | null) {
+  try {
+    if (values) localStorage.setItem(key, JSON.stringify(values));
+    else localStorage.removeItem(key);
+  } catch {
+    // Storage unavailable (private mode); drafts are a convenience only.
+  }
+}
+
+export function ScoreCard({ contestant, round, song, order, existing, onStage = false, missed = false }: Props) {
   const [state, action] = useActionState<SaveScoreState, FormData>(saveScore, {});
-  const [values, setValues] = useState<Record<CriterionKey, number>>(() => {
-    const v = {} as Record<CriterionKey, number>;
+  const draftKey = `score-draft:${round}:${contestant.id}`;
+  const [values, setValues] = useState<Values>(() => {
+    const v = {} as Values;
     for (const c of CRITERIA) v[c.key] = existing ? existing[c.key] : 0;
     return v;
   });
-  const [open, setOpen] = useState(!existing || onStage);
+  const [open, setOpen] = useState(onStage);
   const [dirty, setDirty] = useState(false);
+
+  // Restore an unsubmitted draft after mount (localStorage is client-only).
+  useEffect(() => {
+    if (existing) return;
+    const draft = readDraft(draftKey);
+    if (draft) {
+      setValues(draft);
+      setDirty(true);
+    }
+  }, [draftKey, existing]);
+
+  useEffect(() => {
+    if (dirty) writeDraft(draftKey, values);
+  }, [dirty, draftKey, values]);
+
+  useEffect(() => {
+    if (state.ok) writeDraft(draftKey, null);
+  }, [state.ok, state.savedAt, draftKey]);
   const total = CRITERIA.reduce((s, c) => s + values[c.key], 0);
   const saved = (existing != null || state.ok) && !dirty;
 
   return (
     <article
-      className={`card ${onStage ? "border-accent-2 ring-2 ring-accent-2/60" : saved ? "border-emerald-700/60" : ""}`}
+      className={`card ${
+        onStage
+          ? "pop-in border-accent-2 ring-2 ring-accent-2/60"
+          : missed && !saved
+            ? "border-amber-500/60"
+            : saved
+              ? "border-emerald-700/60"
+              : ""
+      }`}
     >
       {onStage && (
         <div className="mb-3 text-xs font-bold tracking-[0.25em] text-accent-2 uppercase">🎤 On stage now</div>

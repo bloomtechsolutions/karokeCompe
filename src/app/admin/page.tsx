@@ -311,6 +311,9 @@ async function ControlTab({
         ((round === "final" ? b.final_order : b.performance_order) ?? 999) || a.name.localeCompare(b.name),
   );
   const onStageNow = contestants.find((c) => c.id === nowPerforming) ?? null;
+  const onStageScored = scores.filter(
+    (s) => s.round === round && s.contestant_id === nowPerforming && judges.some((j) => j.id === s.judge_id),
+  ).length;
   const expected = inRound.length * judges.length;
   const submitted = scores.filter(
     (s) => s.round === round && inRound.some((c) => c.id === s.contestant_id) && judges.some((j) => j.id === s.judge_id),
@@ -346,11 +349,21 @@ async function ControlTab({
             {onStageNow ? (
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎤</span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="truncate text-lg font-bold">{onStageNow.name}</div>
                   <div className="truncate text-sm text-muted">
                     {CATEGORY_LABEL[onStageNow.category]} ·{" "}
                     {(round === "final" ? onStageNow.song_final : onStageNow.song_round1) ?? "Song TBA"}
+                  </div>
+                </div>
+                <div
+                  className={`shrink-0 text-right text-sm font-semibold tabular-nums ${
+                    onStageScored >= judges.length ? "text-emerald-300" : "text-amber-300"
+                  }`}
+                >
+                  {onStageScored}/{judges.length} judges
+                  <div className="text-xs font-normal text-muted">
+                    {onStageScored >= judges.length ? "All scored" : "Still scoring"}
                   </div>
                 </div>
               </div>
