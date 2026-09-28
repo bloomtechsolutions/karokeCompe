@@ -359,31 +359,37 @@ function SetupView({ rows }: { rows: LeaderboardRow[] }) {
       .filter((r) => r.category === c)
       .sort((a, b) => (a.performance_order ?? 999) - (b.performance_order ?? 999));
   return (
-    <IdleHero>
-      <p className="mt-[0.8rem] text-[2rem] font-bold">Starting soon</p>
+    <IdleHero
+      lineup={
+        rows.length > 0 && (
+          <div className="grid gap-[0.8rem]">
+            {CATEGORIES.map((c) => (
+              <div
+                key={c}
+                className="flex items-center gap-[1rem] rounded-2xl border border-line/70 bg-panel/70 px-[1.2rem] py-[0.8rem] backdrop-blur"
+              >
+                <div className="w-[7rem] shrink-0 text-[1.2rem] font-extrabold uppercase">
+                  {CATEGORY_LABEL[c]} <span className="text-muted">· {byCat(c).length}</span>
+                </div>
+                <div className="flex flex-wrap gap-[0.5rem]">
+                  {byCat(c).map((r, i) => (
+                    <span
+                      key={r.contestant_id}
+                      className="pop-in rounded-full bg-panel-2 px-[0.9rem] py-[0.3rem] text-[1rem]"
+                      style={{ animationDelay: `${i * 80}ms` }}
+                    >
+                      {r.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    >
+      <p className="mt-[clamp(0.3rem,1.2dvh,0.8rem)] text-[clamp(1.4rem,3.6dvh,2rem)] font-bold">Starting soon</p>
       <p className="mt-[0.2rem] text-[1.2rem] text-muted">Think you&apos;ve got the voice? Prove it on stage!</p>
-      {rows.length > 0 && (
-        <div className="mt-[1.2rem] grid w-full max-w-[80rem] gap-[0.8rem] text-left">
-          {CATEGORIES.map((c) => (
-            <div key={c} className="flex items-center gap-[1rem] rounded-2xl border border-line/70 bg-panel/70 px-[1.2rem] py-[0.8rem] backdrop-blur">
-              <div className="w-[7rem] shrink-0 text-[1.2rem] font-extrabold uppercase">
-                {CATEGORY_LABEL[c]} <span className="text-muted">· {byCat(c).length}</span>
-              </div>
-              <div className="flex flex-wrap gap-[0.5rem]">
-                {byCat(c).map((r, i) => (
-                  <span
-                    key={r.contestant_id}
-                    className="pop-in rounded-full bg-panel-2 px-[0.9rem] py-[0.3rem] text-[1rem]"
-                    style={{ animationDelay: `${i * 80}ms` }}
-                  >
-                    {r.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </IdleHero>
   );
 }

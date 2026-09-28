@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { CATEGORY_LABEL, type Category } from "@/lib/types";
+import { AutoScroll } from "./AutoScroll";
+import { FitScale } from "./FitScale";
 
 export type NextUp = { name: string; category: Category; song: string | null } | null;
 
@@ -230,22 +232,33 @@ export function IdleStage({
 }
 
 /** Full-screen version for before the competition starts. */
-export function IdleHero({ children }: { children?: React.ReactNode }) {
+export function IdleHero({ children, lineup }: { children?: React.ReactNode; lineup?: React.ReactNode }) {
   return (
-    <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden pt-[3.5rem] pb-[1rem] text-center">
+    <div className="relative isolate flex min-h-0 flex-1 flex-col items-center overflow-hidden pt-[clamp(1.5rem,5dvh,3.5rem)] pb-[0.5rem] text-center">
       <StageBeams />
       <SoundWaves className="h-[30%]" />
       <NoteStream count={24} />
       <Sparkles count={26} />
-      <div className="relative z-10 flex flex-col items-center">
-        <LogoOrb size="clamp(10rem, 27dvh, 19rem)" />
-        <p className="mt-[1.6rem] text-[1.1rem] font-semibold tracking-[0.5em] text-muted uppercase">Duet | Single</p>
+      <div className="relative z-10 flex shrink-0 flex-col items-center">
+        <LogoOrb size="clamp(7rem, 22dvh, 17rem)" />
+        <p className="mt-[clamp(0.6rem,2.5dvh,1.6rem)] text-[1.1rem] font-semibold tracking-[0.5em] text-muted uppercase">
+          Duet | Single
+        </p>
         <div className="flex flex-wrap items-baseline justify-center gap-x-[1rem] leading-none">
-          <span className="shine-text text-[4.4rem] font-extrabold tracking-tight uppercase">Karaoke</span>
-          <span className="font-script text-[4.8rem] text-accent-2">Competition</span>
+          <span className="shine-text text-[clamp(2.6rem,7dvh,4.4rem)] font-extrabold tracking-tight uppercase">Karaoke</span>
+          <span className="font-script text-[clamp(2.8rem,7.6dvh,4.8rem)] text-accent-2">Competition</span>
         </div>
         {children}
       </div>
+      {lineup && (
+        <div className="relative z-10 mt-[clamp(0.6rem,2dvh,1.2rem)] flex min-h-0 w-full max-w-[84rem] flex-1 flex-col text-left">
+          <AutoScroll className="min-h-0 flex-1">
+            <FitScale group="setup-lineup" min={0.55}>
+              {lineup}
+            </FitScale>
+          </AutoScroll>
+        </div>
+      )}
     </div>
   );
 }
