@@ -64,24 +64,42 @@ export function LogoOrb({ size, minimal = false }: { size: string; minimal?: boo
   );
 }
 
-/** A full-width audio equaliser along the bottom edge. */
-function Equalizer({ bars = 64 }: { bars?: number }) {
+/** A smooth sine path spanning two wavelengths per tile, so it can scroll seamlessly. */
+function wavePath(amp: number, mid: number) {
+  // 4 half-waves over 400 units; the pattern repeats every 200 units.
+  return `M0 ${mid} Q50 ${mid - amp} 100 ${mid} T200 ${mid} T300 ${mid} T400 ${mid}`;
+}
+
+/** Glowing sound waves rolling along the bottom edge. */
+function SoundWaves({ className = "h-[38%]" }: { className?: string }) {
+  const waves = [
+    { color: "#f472a0", amp: 26, mid: 60, width: 3.5, dur: 7, opacity: 0.85 },
+    { color: "#f2c46d", amp: 18, mid: 70, width: 2.5, dur: 5, opacity: 0.7, reverse: true },
+    { color: "#ffffff", amp: 34, mid: 58, width: 1.5, dur: 10, opacity: 0.45 },
+    { color: "#e0356f", amp: 12, mid: 80, width: 5, dur: 4, opacity: 0.5, reverse: true },
+  ];
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[38%] items-end gap-[0.3%] px-[1%] opacity-35">
-      {Array.from({ length: bars }, (_, i) => {
-        const h = 35 + ((i * 37) % 65);
-        return (
-          <span
-            key={i}
-            className="eq-bar flex-1"
-            style={{
-              height: `${h}%`,
-              animationDuration: `${0.45 + ((i * 13) % 9) * 0.09}s`,
-              animationDelay: `${-((i * 7) % 10) * 0.1}s`,
-            }}
+    <div aria-hidden className={`pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden ${className}`}>
+      {waves.map((w, i) => (
+        <svg
+          key={i}
+          className={`wave-roll absolute bottom-0 left-0 h-full ${w.reverse ? "wave-roll-reverse" : ""}`}
+          style={{ width: "200%", animationDuration: `${w.dur}s`, opacity: w.opacity }}
+          viewBox="0 0 400 100"
+          preserveAspectRatio="none"
+        >
+          <path
+            d={wavePath(w.amp, w.mid)}
+            fill="none"
+            stroke={w.color}
+            strokeWidth={w.width}
+            vectorEffect="non-scaling-stroke"
+            style={{ filter: `drop-shadow(0 0 6px ${w.color})` }}
           />
-        );
-      })}
+        </svg>
+      ))}
+      {/* soft glow under the waves */}
+      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-accent/25 to-transparent" />
     </div>
   );
 }
@@ -162,7 +180,7 @@ export function IdleStage({
   return (
     <section className="pop-in relative isolate flex min-h-[16rem] shrink-0 items-center overflow-hidden rounded-3xl border border-accent/40 bg-[radial-gradient(ellipse_at_20%_50%,rgb(224_53_111/0.35),transparent_60%),radial-gradient(ellipse_at_90%_0%,rgb(242_196_109/0.15),transparent_50%)] bg-panel/60 lg:h-[31%]">
       <StageBeams />
-      <Equalizer />
+      <SoundWaves />
       <NoteStream />
       <Sparkles />
       <div className="relative z-10 flex w-full items-center gap-[3.5rem] px-[3rem] py-[1.5rem]">
@@ -214,7 +232,7 @@ export function IdleHero({ children }: { children?: React.ReactNode }) {
   return (
     <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden pt-[3.5rem] pb-[1rem] text-center">
       <StageBeams />
-      <Equalizer bars={80} />
+      <SoundWaves className="h-[30%]" />
       <NoteStream count={24} />
       <Sparkles count={26} />
       <div className="relative z-10 flex flex-col items-center">

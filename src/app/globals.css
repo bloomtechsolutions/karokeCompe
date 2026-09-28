@@ -498,3 +498,27 @@ html.tv-idle * {
     animation: none;
   }
 }
+
+/* Sound waves rolling along the bottom of the logo show */
+.wave-roll {
+  animation: wave-roll linear infinite;
+}
+.wave-roll-reverse {
+  animation-direction: reverse;
+}
+
+@keyframes wave-roll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* one repeat of the pattern = half the svg (which is 200% of the box) */
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-roll {
+    animation: none;
+  }
+}
