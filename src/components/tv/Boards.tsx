@@ -5,12 +5,9 @@ import { CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types"
 import { categoryVoting } from "@/lib/voting";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { AutoScroll } from "./AutoScroll";
+import { FitScale } from "./FitScale";
 import { Fragment } from "react";
 import { useFlash, useFlip } from "./hooks";
-
-// While someone is on stage the spotlight takes most of the screen and the
-// leaderboards shrink to fit beside it.
-const COMPACT_ZOOM = 0.85;
 
 const MEDAL = ["bg-gold text-bg", "bg-zinc-200 text-bg", "bg-amber-700 text-white"];
 
@@ -195,9 +192,10 @@ export function Round1Board({
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Performers coming soon…</p>
       ) : (
         <AutoScroll className="relative -mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
+          <FitScale>
           <div
             className="grid gap-[0.5rem] py-[0.2rem]"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15.5rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15.5rem, 1fr))" }}
           >
             {ranked.map((r, i) => (
               <Fragment key={r.contestant_id}>
@@ -220,6 +218,7 @@ export function Round1Board({
               </Fragment>
             ))}
           </div>
+          </FitScale>
         </AutoScroll>
       )}
     </BoardShell>
@@ -364,9 +363,10 @@ export function FinalBoard({
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Finalists to be announced…</p>
       ) : (
         <AutoScroll className="-mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
+          <FitScale>
           <div
             className="grid gap-[0.6rem] py-[0.2rem]"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(26rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(26rem, 1fr))" }}
           >
             {ranked.map((r) => (
               <div key={r.contestant_id} ref={flipRef(r.contestant_id)}>
@@ -383,6 +383,7 @@ export function FinalBoard({
               </div>
             ))}
           </div>
+          </FitScale>
         </AutoScroll>
       )}
     </BoardShell>

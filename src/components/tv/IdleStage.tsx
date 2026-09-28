@@ -178,49 +178,51 @@ export function IdleStage({
   progress: { done: number; total: number } | null;
 }) {
   return (
-    <section className="pop-in relative isolate flex min-h-[16rem] shrink-0 items-center overflow-hidden rounded-3xl border border-accent/40 bg-[radial-gradient(ellipse_at_20%_50%,rgb(224_53_111/0.35),transparent_60%),radial-gradient(ellipse_at_90%_0%,rgb(242_196_109/0.15),transparent_50%)] bg-panel/60 lg:h-[31%]">
+    <section className="pop-in relative isolate flex shrink-0 items-center overflow-hidden rounded-3xl border border-accent/40 bg-[radial-gradient(ellipse_at_20%_50%,rgb(224_53_111/0.35),transparent_60%),radial-gradient(ellipse_at_90%_0%,rgb(242_196_109/0.15),transparent_50%)] bg-panel/60">
       <StageBeams />
       <SoundWaves />
       <NoteStream />
       <Sparkles />
-      <div className="relative z-10 flex w-full items-center gap-[3.5rem] px-[3rem] py-[1.5rem]">
-        <LogoOrb size="clamp(9rem, 24dvh, 16rem)" />
+      <div className="relative z-10 flex w-full items-center gap-[3rem] px-[2.5rem] py-[1.2rem]">
+        <LogoOrb size="clamp(8rem, 21dvh, 14rem)" />
         <div className="min-w-0 flex-1">
-          <div className="text-[1.1rem] font-bold tracking-[0.4em] text-accent-2 uppercase">{eyebrow}</div>
-          <div className="mt-[0.3rem] flex flex-wrap items-baseline gap-x-[1rem] leading-none">
-            <span className="shine-text text-[3.8rem] font-extrabold tracking-tight uppercase">Karaoke</span>
-            <span className="font-script text-[4.2rem] text-accent-2">Competition</span>
+          <div className="text-[1rem] font-bold tracking-[0.4em] text-accent-2 uppercase">{eyebrow}</div>
+          <div className="mt-[0.2rem] flex flex-wrap items-baseline gap-x-[1rem] leading-none">
+            <span className="shine-text text-[3.3rem] font-extrabold tracking-tight uppercase">Karaoke</span>
+            <span className="font-script text-[3.7rem] text-accent-2">Competition</span>
           </div>
-          {nextUp ? (
-            <div className="mt-[0.9rem] inline-flex max-w-full items-center gap-[1rem] rounded-2xl border border-gold/40 bg-bg/60 px-[1.2rem] py-[0.7rem] backdrop-blur">
-              <span className="text-[2rem]">🎤</span>
-              <div className="min-w-0">
-                <div className="text-[0.85rem] font-bold tracking-[0.3em] text-gold uppercase">
-                  Next on stage · {CATEGORY_LABEL[nextUp.category]}
+          <div className="mt-[0.9rem] flex flex-wrap items-center gap-x-[2rem] gap-y-[0.8rem]">
+            {nextUp ? (
+              <div className="inline-flex max-w-full min-w-0 items-center gap-[1rem] rounded-2xl border border-gold/40 bg-bg/60 px-[1.2rem] py-[0.6rem] backdrop-blur">
+                <span className="text-[1.8rem]">🎤</span>
+                <div className="min-w-0">
+                  <div className="text-[0.8rem] font-bold tracking-[0.3em] text-gold uppercase">
+                    Next on stage · {CATEGORY_LABEL[nextUp.category]}
+                  </div>
+                  <div className="truncate text-[1.8rem] leading-tight font-extrabold">{nextUp.name}</div>
+                  {nextUp.song && <div className="truncate text-[0.95rem] text-muted">♪ {nextUp.song}</div>}
                 </div>
-                <div className="truncate text-[2rem] leading-tight font-extrabold">{nextUp.name}</div>
-                {nextUp.song && <div className="truncate text-[1rem] text-muted">♪ {nextUp.song}</div>}
               </div>
-            </div>
-          ) : (
-            <div className="mt-[1.2rem] text-[1.6rem] font-semibold text-muted">Get ready for the next act!</div>
-          )}
-          {progress && progress.total > 0 && (
-            <div className="mt-[1rem] max-w-[34rem]">
-              <div className="flex justify-between text-[0.9rem] text-muted tabular-nums">
-                <span>Performances</span>
-                <span>
-                  {progress.done} of {progress.total}
-                </span>
+            ) : (
+              <div className="text-[1.5rem] font-semibold text-muted">Get ready for the next act!</div>
+            )}
+            {progress && progress.total > 0 && (
+              <div className="w-[16rem] shrink-0">
+                <div className="flex justify-between text-[0.9rem] text-muted tabular-nums">
+                  <span>Performances</span>
+                  <span>
+                    {progress.done} of {progress.total}
+                  </span>
+                </div>
+                <div className="mt-[0.3rem] h-[0.5rem] overflow-hidden rounded-full bg-bg/70">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-accent via-accent-2 to-gold transition-[width] duration-1000"
+                    style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="mt-[0.3rem] h-[0.5rem] overflow-hidden rounded-full bg-bg/70">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent via-accent-2 to-gold transition-[width] duration-1000"
-                  style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </section>
