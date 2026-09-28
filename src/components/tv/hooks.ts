@@ -4,24 +4,24 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * Animates list items to their new position when the order changes (FLIP).
- * Uses offsetTop so it is unaffected by the container's scroll position.
+ * Uses offsetLeft/offsetTop so it is unaffected by the container's scroll position.
  */
 export function useFlip(keys: string[]) {
   const nodes = useRef(new Map<string, HTMLElement>());
-  const tops = useRef(new Map<string, number>());
+  const pos = useRef(new Map<string, { x: number; y: number }>());
   const signature = keys.join("|");
 
   useLayoutEffect(() => {
     nodes.current.forEach((el, key) => {
-      const next = el.offsetTop;
-      const prev = tops.current.get(key);
-      if (prev !== undefined && Math.abs(prev - next) > 1) {
+      const next = { x: el.offsetLeft, y: el.offsetTop };
+      const prev = pos.current.get(key);
+      if (prev && (Math.abs(prev.x - next.x) > 1 || Math.abs(prev.y - next.y) > 1)) {
         el.animate(
-          [{ transform: `translateY(${prev - next}px)` }, { transform: "translateY(0)" }],
+          [{ transform: `translate(${prev.x - next.x}px, ${prev.y - next.y}px)` }, { transform: "translate(0, 0)" }],
           { duration: 800, easing: "cubic-bezier(.2,.8,.2,1)" },
         );
       }
-      tops.current.set(key, next);
+      pos.current.set(key, next);
     });
   }, [signature]);
 

@@ -258,3 +258,162 @@ html.tv-idle * {
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Idle stage: United BML logo show while nobody is performing         */
+/* ------------------------------------------------------------------ */
+
+.vinyl {
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at center, #e0356f 0 17%, #1a0710 17.5% 19%, transparent 19.5%),
+    repeating-radial-gradient(circle at center, #140509 0 2px, #26101a 2px 4px),
+    #140509;
+  box-shadow: 0 0 0 3px rgb(242 196 109 / 0.35), 0 30px 80px rgb(0 0 0 / 0.55), 0 0 90px rgb(224 53 111 / 0.35);
+  animation: spin 9s linear infinite;
+}
+.vinyl::after {
+  /* light sheen that stays put while the record turns */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from 20deg, transparent 0 15%, rgb(255 255 255 / 0.12) 20%, transparent 28% 65%, rgb(255 255 255 / 0.08) 70%, transparent 78%);
+  animation: spin 9s linear infinite reverse;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.halo {
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent, rgb(224 53 111 / 0.55), transparent 30%, rgb(242 196 109 / 0.45), transparent 60%, rgb(244 114 160 / 0.5), transparent);
+  filter: blur(28px);
+  animation: spin 12s linear infinite;
+}
+
+.logo-beat {
+  animation: logo-beat 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px rgb(255 255 255 / 0.35)) drop-shadow(0 0 40px rgb(224 53 111 / 0.6));
+}
+
+@keyframes logo-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.07);
+  }
+  30% {
+    transform: scale(0.99);
+  }
+}
+
+.sound-ring {
+  border-radius: 9999px;
+  border: 3px solid rgb(244 114 160 / 0.7);
+  animation: sound-ring 3s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+@keyframes sound-ring {
+  from {
+    transform: scale(0.75);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.eq-bar {
+  transform-origin: bottom;
+  border-radius: 9999px 9999px 0 0;
+  background: linear-gradient(to top, #e0356f, #f472a0 55%, #f2c46d);
+  animation: eq 1s ease-in-out infinite alternate;
+}
+
+@keyframes eq {
+  0% {
+    transform: scaleY(0.12);
+  }
+  35% {
+    transform: scaleY(0.75);
+  }
+  60% {
+    transform: scaleY(0.35);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.twinkle {
+  animation: twinkle 2.6s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+.note-rise {
+  animation: note-rise 5s ease-out infinite;
+}
+
+@keyframes note-rise {
+  0% {
+    transform: translate(0, 20%) rotate(-10deg) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx, 0px), -260%) rotate(18deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+.shine-text {
+  background: linear-gradient(100deg, #fbeef4 20%, #f2c46d 40%, #fbeef4 60%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 4s linear infinite;
+}
+
+@keyframes shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl,
+  .vinyl::after,
+  .halo,
+  .logo-beat,
+  .sound-ring,
+  .eq-bar,
+  .twinkle,
+  .note-rise,
+  .shine-text {
+    animation: none;
+  }
+}

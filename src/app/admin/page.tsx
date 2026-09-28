@@ -196,6 +196,7 @@ export default async function AdminPage({
                   showScores
                   votingOpen={false}
                   nowPerforming={settings.now_performing}
+                  sideTitle={false}
                 />
               ))}
             </div>

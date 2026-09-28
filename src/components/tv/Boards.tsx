@@ -5,11 +5,12 @@ import { CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types"
 import { categoryVoting } from "@/lib/voting";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { AutoScroll } from "./AutoScroll";
+import { Fragment } from "react";
 import { useFlash, useFlip } from "./hooks";
 
 // While someone is on stage the spotlight takes most of the screen and the
 // leaderboards shrink to fit beside it.
-const COMPACT_ZOOM = 0.72;
+const COMPACT_ZOOM = 0.85;
 
 const MEDAL = ["bg-gold text-bg", "bg-zinc-200 text-bg", "bg-amber-700 text-white"];
 
@@ -56,24 +57,41 @@ function BoardShell({
   title,
   subtitle,
   compact = false,
+  grow = 1,
+  sideTitle = true,
   children,
 }: {
   title: string;
   subtitle: React.ReactNode;
   compact?: boolean;
+  /** Share of the available height, roughly the number of tile rows. */
+  grow?: number;
+  /** Put the title in a column on the left (wide TV bands) instead of on top. */
+  sideTitle?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex min-h-0 flex-col rounded-3xl border border-line/70 bg-panel/70 p-[1.2rem] backdrop-blur-sm">
-      <div className="mb-[0.8rem] flex items-baseline justify-between gap-3">
+    <section
+      className={`flex min-h-0 gap-[1.2rem] rounded-3xl border border-line/70 bg-panel/70 p-[1.1rem] backdrop-blur-sm ${
+        sideTitle ? "flex-col lg:flex-row" : "flex-col"
+      }`}
+      style={{ flexGrow: Math.max(grow, 1), flexBasis: 0 }}
+    >
+      <div
+        className={`flex shrink-0 gap-3 ${
+          sideTitle
+            ? "items-baseline justify-between lg:w-[9.5rem] lg:flex-col lg:items-start lg:justify-center lg:border-r lg:border-line/60 lg:pr-[1rem]"
+            : "items-baseline justify-between"
+        }`}
+      >
         <h2
-          className={`leading-none font-extrabold tracking-wide uppercase ${compact ? "text-[1.3rem]" : "text-[1.7rem]"}`}
+          className={`leading-none font-extrabold tracking-wide uppercase ${compact ? "text-[1.5rem]" : "text-[1.9rem]"}`}
         >
           {title}
         </h2>
-        <span className={`text-right text-muted ${compact ? "text-[0.7rem]" : "text-[0.85rem]"}`}>{subtitle}</span>
+        <span className={`text-muted ${compact ? "text-[0.75rem]" : "text-[0.85rem]"}`}>{subtitle}</span>
       </div>
-      {children}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -99,14 +117,14 @@ function Round1Row({
   const flash = useFlash(`${r.r1_judges}|${score}`);
   return (
     <div
-      className={`flex items-center gap-[0.8rem] rounded-2xl px-[0.6rem] py-[0.55rem] ${flash ? "row-flash" : ""} ${
-        onStage ? "bg-accent/15 ring-2 ring-accent-2" : ""
+      className={`flex h-full items-center gap-[0.8rem] rounded-2xl px-[0.7rem] py-[0.45rem] ${flash ? "row-flash" : ""} ${
+        onStage ? "bg-accent/15 ring-2 ring-accent-2" : "bg-bg/35 ring-1 ring-line/40"
       }`}
     >
       <RankBadge rank={displayRank} show={showScores && score != null} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-[1.25rem] leading-tight font-bold">{r.name}</span>
+          <span className="line-clamp-2 text-[1.15rem] leading-tight font-bold">{r.name}</span>
           {onStage && <span className="shrink-0 text-[1rem]">🎤</span>}
           {r.is_finalist && (
             <span className="shrink-0 rounded-full bg-gold/20 px-2 py-0.5 text-[0.65rem] font-bold tracking-wider text-gold uppercase">
@@ -169,29 +187,35 @@ export function Round1Board({
       title={CATEGORY_LABEL[category]}
       subtitle={showScores ? `Top ${finalists} go to the final` : "Scores revealed later"}
       compact={compact}
+      grow={Math.ceil(ranked.length / 5)}
     >
       {ranked.length === 0 ? (
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Performers coming soon…</p>
       ) : (
         <AutoScroll className="relative -mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
-          <div className="space-y-[0.3rem] py-[0.2rem]" style={compact ? { zoom: COMPACT_ZOOM } : undefined}>
+          <div
+            className="grid gap-[0.5rem] py-[0.2rem]"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
+          >
             {ranked.map((r, i) => (
-              <div key={r.contestant_id} ref={flipRef(r.contestant_id)}>
-                <Round1Row
-                  r={r}
-                  judgeCount={judgeCount}
-                  showScores={showScores}
-                  onStage={r.contestant_id === nowPerforming}
-                  displayRank={showScores ? (r.r1_judges > 0 ? r.rank : null) : (r.performance_order ?? null)}
-                />
+              <Fragment key={r.contestant_id}>
+                <div ref={flipRef(r.contestant_id)}>
+                  <Round1Row
+                    r={r}
+                    judgeCount={judgeCount}
+                    showScores={showScores}
+                    onStage={r.contestant_id === nowPerforming}
+                    displayRank={showScores ? (r.r1_judges > 0 ? r.rank : null) : (r.performance_order ?? null)}
+                  />
+                </div>
                 {i === cutAfter - 1 && (
-                  <div className="my-[0.4rem] flex items-center gap-2 text-[0.7rem] font-bold tracking-[0.25em] text-gold uppercase">
+                  <div className="col-span-full my-[0.2rem] flex items-center gap-2 text-[0.7rem] font-bold tracking-[0.25em] text-gold uppercase">
                     <span className="h-px flex-1 border-t border-dashed border-gold/60" />
                     Final cut
                     <span className="h-px flex-1 border-t border-dashed border-gold/60" />
                   </div>
                 )}
-              </div>
+              </Fragment>
             ))}
           </div>
         </AutoScroll>
@@ -227,15 +251,15 @@ function FinalRow({
   const audienceWeight = 100 - judgeWeight;
   return (
     <div
-      className={`rounded-2xl px-[0.7rem] py-[0.7rem] ${flash ? "row-flash" : ""} ${
-        onStage ? "bg-accent/15 ring-2 ring-accent-2" : ""
+      className={`h-full rounded-2xl px-[0.8rem] py-[0.7rem] ${flash ? "row-flash" : ""} ${
+        onStage ? "bg-accent/15 ring-2 ring-accent-2" : "bg-bg/35 ring-1 ring-line/40"
       }`}
     >
       <div className="flex items-center gap-[0.8rem]">
         <RankBadge rank={displayRank} show={showScores && r.finalScore != null} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-[1.4rem] leading-tight font-bold">{r.name}</span>
+            <span className="line-clamp-2 text-[1.3rem] leading-tight font-bold">{r.name}</span>
             {onStage && <span className="shrink-0 text-[1.1rem]">🎤</span>}
           </div>
           <span className="block truncate text-[0.85rem] text-muted">♪ {r.song_final ?? "Song TBA"}</span>
@@ -294,6 +318,7 @@ export function FinalBoard({
   votingOpen,
   nowPerforming,
   compact = false,
+  sideTitle = true,
 }: {
   category: Category;
   rows: LeaderboardRow[];
@@ -303,6 +328,7 @@ export function FinalBoard({
   votingOpen: boolean;
   nowPerforming: string | null;
   compact?: boolean;
+  sideTitle?: boolean;
 }) {
   const voting = categoryVoting(rows, category, nowPerforming);
   const ranked = showScores
@@ -318,6 +344,8 @@ export function FinalBoard({
     <BoardShell
       title={`${CATEGORY_LABEL[category]} Final`}
       compact={compact}
+      sideTitle={sideTitle}
+      grow={Math.ceil(ranked.length / 2)}
       subtitle={
         votingOpen ? (
           voting.ready ? (
@@ -334,7 +362,10 @@ export function FinalBoard({
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Finalists to be announced…</p>
       ) : (
         <AutoScroll className="-mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
-          <div className="space-y-[0.4rem] py-[0.2rem]" style={compact ? { zoom: COMPACT_ZOOM } : undefined}>
+          <div
+            className="grid gap-[0.6rem] py-[0.2rem]"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(26rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
+          >
             {ranked.map((r) => (
               <div key={r.contestant_id} ref={flipRef(r.contestant_id)}>
                 <FinalRow

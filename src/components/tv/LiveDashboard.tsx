@@ -8,6 +8,7 @@ import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
 import { activeFinalCategories, categoryVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
+import { IdleHero, IdleStage, type NextUp } from "./IdleStage";
 import { TvChrome } from "./TvChrome";
 
 export type DashboardProps = {
@@ -33,7 +34,21 @@ export function LiveDashboard(props: DashboardProps) {
   const hasSide = onStage != null || showVote;
   // In the final, show only the category being performed or voted on.
   const boardCategories = stage === "final" ? activeFinalCategories(rows, nowPerforming) : CATEGORIES;
-  const single = boardCategories.length === 1;
+  // Running order for the current round: who's performed and who's next.
+  const isFinal = stage === "final";
+  const queue = rows
+    .filter((r) => !isFinal || r.is_finalist)
+    .sort(
+      (a, b) =>
+        ((isFinal ? a.final_order : a.performance_order) ?? 999) -
+        ((isFinal ? b.final_order : b.performance_order) ?? 999),
+    );
+  const judged = (r: LeaderboardRow) => (isFinal ? r.final_judges : r.r1_judges) > 0;
+  const next = queue.find((r) => !judged(r) && r.contestant_id !== nowPerforming) ?? null;
+  const nextUp: NextUp = next
+    ? { name: next.name, category: next.category, song: isFinal ? next.song_final : next.song_round1 }
+    : null;
+  const progress = live ? { done: queue.filter(judged).length, total: queue.length } : null;
 
   return (
     <div className="tv-root relative flex min-h-dvh flex-col overflow-hidden lg:h-dvh">
@@ -48,16 +63,10 @@ export function LiveDashboard(props: DashboardProps) {
           <div
             className={`grid min-h-0 flex-1 grid-cols-1 gap-[1.2rem] transition-[grid-template-columns] duration-700 ${
               onStage
-                ? single
-                  ? "lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"
-                  : "lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.85fr)]"
                 : hasSide
-                  ? single
-                    ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-                    : "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]"
-                  : single
-                    ? "lg:grid-cols-1"
-                    : "lg:grid-cols-2"
+                  ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]"
+                  : ""
             }`}
           >
             {hasSide && (
@@ -66,32 +75,37 @@ export function LiveDashboard(props: DashboardProps) {
                 {showVote && <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />}
               </div>
             )}
-            {boardCategories.map((c) =>
-              stage === "round1" ? (
-                <Round1Board
-                  key={c}
-                  category={c}
-                  rows={rows}
-                  judgeCount={props.judgeCount}
-                  showScores={showScores}
-                  finalists={props.finalistsPerCategory}
-                  nowPerforming={nowPerforming}
-                  compact={onStage != null}
-                />
-              ) : (
-                <FinalBoard
-                  key={c}
-                  category={c}
-                  rows={rows}
-                  judgeCount={props.judgeCount}
-                  judgeWeight={props.judgeWeight}
-                  showScores={showScores}
-                  votingOpen={props.votingOpen}
-                  nowPerforming={nowPerforming}
-                  compact={onStage != null && !single}
-                />
-              ),
-            )}
+            <div className="flex min-h-0 flex-col gap-[1.2rem]">
+              {!hasSide && (
+                <IdleStage eyebrow={`${STAGE_LABEL[stage]} · Live`} nextUp={nextUp} progress={progress} />
+              )}
+              {boardCategories.map((c) =>
+                stage === "round1" ? (
+                  <Round1Board
+                    key={c}
+                    category={c}
+                    rows={rows}
+                    judgeCount={props.judgeCount}
+                    showScores={showScores}
+                    finalists={props.finalistsPerCategory}
+                    nowPerforming={nowPerforming}
+                    compact={onStage != null}
+                  />
+                ) : (
+                  <FinalBoard
+                    key={c}
+                    category={c}
+                    rows={rows}
+                    judgeCount={props.judgeCount}
+                    judgeWeight={props.judgeWeight}
+                    showScores={showScores}
+                    votingOpen={props.votingOpen}
+                    nowPerforming={nowPerforming}
+                    compact={onStage != null}
+                  />
+                ),
+              )}
+            </div>
           </div>
         )}
 
@@ -139,7 +153,9 @@ function TopBar({ eventName, stage, votingOpen, voteTotal }: DashboardProps) {
   const votePulse = useFlash(voteTotal, 1200);
   return (
     <header className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-[1.5rem] py-[1rem]">
-      <div className="flex items-baseline gap-[0.6rem] leading-none">
+      <div className="flex items-center gap-[0.9rem] leading-none">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/united-bml-shield.png" alt="United BML" className="h-[3.2rem] w-auto" />
         <span className="text-[2rem] font-extrabold tracking-wide uppercase">{first}</span>
         {rest.length > 0 && <span className="font-script text-[2.6rem] text-accent-2">{rest.join(" ")}</span>}
       </div>
@@ -345,19 +361,21 @@ function SetupView({ rows }: { rows: LeaderboardRow[] }) {
       .filter((r) => r.category === c)
       .sort((a, b) => (a.performance_order ?? 999) - (b.performance_order ?? 999));
   return (
-    <Hero title="Starting soon" subtitle="Think you've got the voice? Prove it on stage!">
+    <IdleHero>
+      <p className="mt-[0.8rem] text-[2rem] font-bold">Starting soon</p>
+      <p className="mt-[0.2rem] text-[1.2rem] text-muted">Think you&apos;ve got the voice? Prove it on stage!</p>
       {rows.length > 0 && (
-        <div className="mt-[2.5rem] grid w-full max-w-[70rem] gap-[1.2rem] md:grid-cols-2">
+        <div className="mt-[1.2rem] grid w-full max-w-[80rem] gap-[0.8rem] text-left">
           {CATEGORIES.map((c) => (
-            <div key={c} className="rounded-3xl border border-line/70 bg-panel/60 p-[1.2rem] text-left">
-              <div className="mb-[0.6rem] text-[1.2rem] font-extrabold uppercase">
+            <div key={c} className="flex items-center gap-[1rem] rounded-2xl border border-line/70 bg-panel/70 px-[1.2rem] py-[0.8rem] backdrop-blur">
+              <div className="w-[7rem] shrink-0 text-[1.2rem] font-extrabold uppercase">
                 {CATEGORY_LABEL[c]} <span className="text-muted">· {byCat(c).length}</span>
               </div>
               <div className="flex flex-wrap gap-[0.5rem]">
                 {byCat(c).map((r, i) => (
                   <span
                     key={r.contestant_id}
-                    className="pop-in rounded-full bg-panel-2 px-[0.9rem] py-[0.35rem] text-[1rem]"
+                    className="pop-in rounded-full bg-panel-2 px-[0.9rem] py-[0.3rem] text-[1rem]"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
                     {r.name}
@@ -368,7 +386,7 @@ function SetupView({ rows }: { rows: LeaderboardRow[] }) {
           ))}
         </div>
       )}
-    </Hero>
+    </IdleHero>
   );
 }
 
