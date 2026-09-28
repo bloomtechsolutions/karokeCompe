@@ -29,7 +29,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
    - **Final score = judges' average × 70% + audience points (30).**
    - The finalist with the most votes in a category gets the full 30 audience points; the others get points in proportion to the leader's votes (e.g. half the leader's votes = 15 points).
    - The 70/30 split can be changed in Settings.
-5. Close voting, then set the stage to *Completed*. Vote counts appear on the public dashboard once voting is closed. Download a CSV of the results from *Results*.
+5. Close voting, then set the stage to *Completed*. Each finalist's vote count updates live on the TV (hidden if "Show scores" is off). Download a CSV of the results from *Results*.
 
 **Audience voting (no login).**
 - **Staff ID:** voters enter their staff ID, and each staff ID can vote once per category.
@@ -48,7 +48,7 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
 - **1st Round / Final** – live leaderboards with animated scores and reordering, the final cut line, and a banner when a category gets a new leader.
   - To show a *Now on stage* spotlight, use **Live control → On stage** (or **Next performer ▶**) in the admin panel.
   - The spotlight fills in a dot as each judge submits, and reveals the judges' score once all of them have scored.
-- **Final with voting open** – a large QR code and a live count of votes cast.
+- **Final** – only the category being performed or voted on is shown (both at the start and end). With voting open: a large QR code, the total votes cast, and each finalist's live vote count.
 - **Completed** – winners' podiums with confetti.
 
 ## Security

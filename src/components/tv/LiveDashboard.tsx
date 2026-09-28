@@ -6,7 +6,7 @@ import { rankFinal, rankRound1 } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
-import { categoryVoting } from "@/lib/voting";
+import { activeFinalCategories, categoryVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
 import { TvChrome } from "./TvChrome";
 
@@ -31,6 +31,9 @@ export function LiveDashboard(props: DashboardProps) {
   const openCategories = CATEGORIES.filter((c) => categoryVoting(rows, c, nowPerforming).ready);
   const showVote = stage === "final" && props.votingOpen && props.vote != null && openCategories.length > 0;
   const hasSide = onStage != null || showVote;
+  // In the final, show only the category being performed or voted on.
+  const boardCategories = stage === "final" ? activeFinalCategories(rows, nowPerforming) : CATEGORIES;
+  const single = boardCategories.length === 1;
 
   return (
     <div className="tv-root relative flex min-h-dvh flex-col overflow-hidden lg:h-dvh">
@@ -45,10 +48,16 @@ export function LiveDashboard(props: DashboardProps) {
           <div
             className={`grid min-h-0 flex-1 grid-cols-1 gap-[1.2rem] transition-[grid-template-columns] duration-700 ${
               onStage
-                ? "lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                ? single
+                  ? "lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"
+                  : "lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)]"
                 : hasSide
-                  ? "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]"
-                  : "lg:grid-cols-2"
+                  ? single
+                    ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+                    : "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]"
+                  : single
+                    ? "lg:grid-cols-1"
+                    : "lg:grid-cols-2"
             }`}
           >
             {hasSide && (
@@ -57,7 +66,7 @@ export function LiveDashboard(props: DashboardProps) {
                 {showVote && <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />}
               </div>
             )}
-            {CATEGORIES.map((c) =>
+            {boardCategories.map((c) =>
               stage === "round1" ? (
                 <Round1Board
                   key={c}
@@ -79,7 +88,7 @@ export function LiveDashboard(props: DashboardProps) {
                   showScores={showScores}
                   votingOpen={props.votingOpen}
                   nowPerforming={nowPerforming}
-                  compact={onStage != null}
+                  compact={onStage != null && !single}
                 />
               ),
             )}
@@ -235,29 +244,29 @@ function VotePanel({
     >
       <div
         className={`shrink-0 rounded-2xl bg-white p-[0.6rem] ${
-          compact ? "w-[8rem] lg:w-[11rem]" : "w-[95%] max-w-[30rem]"
+          compact ? "w-[9rem] lg:w-[14rem]" : "w-[92%] max-w-[min(36rem,50dvh)]"
         }`}
         dangerouslySetInnerHTML={{ __html: vote.svg }}
       />
       <div className={compact ? "min-w-0 flex-1" : ""}>
-        <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[1.35rem]" : "text-[1.6rem]"}`}>
+        <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[2rem]" : "text-[3.2rem]"}`}>
           Scan to vote!
         </div>
-        <div className="text-[0.95rem] font-semibold text-gold">
+        <div className={`font-semibold text-gold ${compact ? "text-[1.15rem]" : "text-[1.5rem]"}`}>
           {openCategories.map((c) => CATEGORY_LABEL[c]).join(" & ")} voting is open
         </div>
         {!compact && (
-          <div className="mt-[0.3rem] text-[0.9rem] text-muted">
+          <div className="mt-[0.3rem] text-[1.15rem] text-muted">
             Your vote counts for {100 - judgeWeight}% of the final score
           </div>
         )}
         <div
           className={`mt-[0.6rem] leading-none font-extrabold whitespace-nowrap text-gold transition-transform ${
-            compact ? "text-[2rem]" : "text-[2.4rem]"
+            compact ? "text-[2.8rem]" : "text-[4.2rem]"
           } ${pulse ? "scale-110" : ""}`}
         >
           <AnimatedNumber value={voteTotal} decimals={0} />
-          <span className="ml-2 text-[0.95rem] font-semibold text-muted">votes cast</span>
+          <span className={`ml-2 font-semibold text-muted ${compact ? "text-[1.1rem]" : "text-[1.4rem]"}`}>votes cast</span>
         </div>
       </div>
     </section>

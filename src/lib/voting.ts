@@ -18,3 +18,21 @@ export function categoryVoting(
   ).length;
   return { total: finalists.length, performed, ready: finalists.length > 0 && performed === finalists.length };
 }
+
+/**
+ * Which final categories the TV should show right now: the category on stage;
+ * otherwise one that is part-way through; otherwise the one whose voting is
+ * open while the other hasn't started. Both at the start and at the end.
+ */
+export function activeFinalCategories(rows: LeaderboardRow[], nowPerforming: string | null): Category[] {
+  const all: Category[] = ["solo", "duet"];
+  const onStage = rows.find((r) => r.contestant_id === nowPerforming && r.is_finalist);
+  if (onStage) return [onStage.category];
+  const status = all.map((c) => ({ c, ...categoryVoting(rows, c, nowPerforming) }));
+  const partway = status.filter((s) => s.performed > 0 && !s.ready);
+  if (partway.length > 0) return partway.map((s) => s.c);
+  const ready = status.filter((s) => s.ready);
+  if (ready.length === 1) return [ready[0].c];
+  const withFinalists = all.filter((c) => rows.some((r) => r.category === c && r.is_finalist));
+  return withFinalists.length > 0 ? withFinalists : all;
+}

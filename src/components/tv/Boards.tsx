@@ -24,6 +24,20 @@ function RankBadge({ rank, show }: { rank: number | null; show: boolean }) {
   );
 }
 
+/** Live audience vote count for a finalist; pulses when it goes up. */
+function VoteCount({ votes }: { votes: number }) {
+  const flash = useFlash(votes, 1200);
+  return (
+    <span
+      className={`inline-flex items-center gap-[0.3rem] rounded-full border border-gold/50 bg-gold/15 px-[0.6rem] py-[0.1rem] text-[1rem] font-bold text-gold tabular-nums transition-transform ${
+        flash ? "scale-125" : ""
+      }`}
+    >
+      🗳 <AnimatedNumber value={votes} decimals={0} />
+    </span>
+  );
+}
+
 export function JudgeDots({ done, total, size = "0.55rem" }: { done: number; total: number; size?: string }) {
   return (
     <span className="inline-flex gap-[0.25rem]" aria-label={`${done} of ${total} judges scored`}>
@@ -230,7 +244,10 @@ function FinalRow({
           <span className="text-[2.2rem] leading-none font-extrabold">
             {showScores && r.finalScore != null ? <AnimatedNumber value={r.finalScore} /> : "—"}
           </span>
-          <JudgeDots done={r.final_judges} total={judgeCount} />
+          <div className="flex items-center gap-[0.6rem]">
+            {r.votes != null && (votingReady || !votingOpen) && <VoteCount votes={r.votes} />}
+            <JudgeDots done={r.final_judges} total={judgeCount} />
+          </div>
         </div>
       </div>
       {showScores && (
@@ -240,7 +257,7 @@ function FinalRow({
               className="h-full bg-gradient-to-r from-accent to-accent-2 transition-[width] duration-1000 ease-out"
               style={{ width: `${r.judgePoints ?? 0}%` }}
             />
-            {votingOpen ? (
+            {r.votes == null || (votingOpen && !votingReady) ? (
               <div className="shimmer h-full" style={{ width: `${audienceWeight}%` }} />
             ) : (
               <div
@@ -255,12 +272,11 @@ function FinalRow({
             </span>
             <span>
               <span className="text-gold">■</span> Audience{" "}
-              {votingOpen
-                ? votingReady
+              {votingOpen && !votingReady
+                ? "after all perform"
+                : r.votes == null
                   ? "voting now…"
-                  : "after all perform"
-                : `${fmt(r.audiencePoints, 1)}/${audienceWeight}`}
-              {!votingOpen && r.votes != null ? ` · ${r.votes} votes` : ""}
+                  : `${fmt(r.audiencePoints, 1)}/${audienceWeight} · ${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}
             </span>
           </div>
         </>
