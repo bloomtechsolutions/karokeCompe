@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Great_Vibes, Poppins } from "next/font/google";
+import { StaleDeployReload } from "@/components/StaleDeployReload";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${poppins.variable} ${script.variable} font-sans antialiased`}>
+        <StaleDeployReload />
         {children}
       </body>
     </html>
