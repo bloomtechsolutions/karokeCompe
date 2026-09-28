@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Header, NavLink } from "@/components/Header";
+import { homeFor } from "@/lib/auth";
 import { getCurrentProfile } from "@/lib/data";
 import { LoginForm } from "./LoginForm";
 
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const profile = await getCurrentProfile();
-  if (profile?.active) redirect(profile.role === "admin" ? "/admin" : "/judge");
+  if (profile?.active) redirect(homeFor(profile.role));
 
   return (
     <>

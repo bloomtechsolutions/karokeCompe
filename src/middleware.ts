@@ -7,5 +7,5 @@ export async function middleware(request: NextRequest) {
 
 // Only authenticated areas need session refresh; public pages stay fast.
 export const config = {
-  matcher: ["/judge/:path*", "/admin/:path*", "/login"],
+  matcher: ["/judge/:path*", "/admin/:path*", "/host/:path*", "/login"],
 };

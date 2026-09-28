@@ -233,6 +233,8 @@ export async function createJudge(formData: FormData) {
   const fullName = str(formData, "full_name");
   const email = str(formData, "email").toLowerCase();
   const password = str(formData, "password");
+  const role = str(formData, "role") === "host" ? "host" : "judge";
+  const label = role === "host" ? "Host" : "Judge";
   if (!fullName || !email) fail("Name and email are required.", "judges");
   if (password.length < 8) fail("Password must be at least 8 characters.", "judges");
 
@@ -242,13 +244,13 @@ export async function createJudge(formData: FormData) {
     password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
-    app_metadata: { role: "judge" },
+    app_metadata: { role },
   });
-  if (error || !data.user) fail(error?.message ?? "Could not create judge.", "judges");
+  if (error || !data.user) fail(error?.message ?? `Could not create ${label.toLowerCase()}.`, "judges");
   // Trigger creates the profile; make sure name/role are set.
-  await admin.from("profiles").upsert({ id: data.user.id, full_name: fullName, role: "judge", active: true });
-  await audit("judge_create", "profile", data.user.id, { email });
-  done(`Judge ${fullName} created.`, "judges");
+  await admin.from("profiles").upsert({ id: data.user.id, full_name: fullName, role, active: true });
+  await audit(`${role}_create`, "profile", data.user.id, { email });
+  done(`${label} ${fullName} created.`, "judges");
 }
 
 export async function setJudgeActive(formData: FormData) {

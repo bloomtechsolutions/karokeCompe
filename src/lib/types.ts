@@ -1,7 +1,7 @@
 export type Category = "solo" | "duet";
 export type Stage = "setup" | "round1" | "final" | "completed";
 export type Round = "round1" | "final";
-export type Role = "judge" | "admin";
+export type Role = "judge" | "admin" | "host";
 
 export type Settings = {
   id: number;

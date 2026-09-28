@@ -210,7 +210,14 @@ export default async function AdminPage({
 
         {tab === "contestants" && <ContestantsTab contestants={contestants} />}
 
-        {tab === "judges" && <JudgesTab judges={judges} scores={scores} contestants={contestants} />}
+        {tab === "judges" && (
+          <JudgesTab
+            judges={judges}
+            hosts={profiles.filter((p) => p.role === "host")}
+            scores={scores}
+            contestants={contestants}
+          />
+        )}
 
         {tab === "votes" && <VotesTab contestants={contestants} />}
 
@@ -592,12 +599,39 @@ function ContestantsTab({ contestants }: { contestants: Contestant[] }) {
   );
 }
 
+function PersonCard({ person }: { person: Profile }) {
+  return (
+    <details className="card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+        <span className="font-semibold">{person.full_name}</span>
+        <span className={`text-xs ${person.active ? "text-emerald-300" : "text-muted"}`}>
+          {person.active ? "Active" : "Inactive"}
+        </span>
+      </summary>
+      <div className="mt-3 flex flex-col gap-2 border-t border-line/60 pt-3 sm:flex-row">
+        <form action={resetJudgePassword} className="flex flex-1 gap-2">
+          <input type="hidden" name="id" value={person.id} />
+          <input name="password" minLength={8} required placeholder="New password" className="field" autoComplete="off" />
+          <SubmitButton className="btn-ghost text-sm">Set</SubmitButton>
+        </form>
+        <form action={setJudgeActive}>
+          <input type="hidden" name="id" value={person.id} />
+          <input type="hidden" name="active" value={String(!person.active)} />
+          <SubmitButton className="btn-ghost w-full text-sm">{person.active ? "Deactivate" : "Activate"}</SubmitButton>
+        </form>
+      </div>
+    </details>
+  );
+}
+
 function JudgesTab({
   judges,
+  hosts,
   scores,
   contestants,
 }: {
   judges: Profile[];
+  hosts: Profile[];
   scores: Score[];
   contestants: Contestant[];
 }) {
@@ -611,36 +645,28 @@ function JudgesTab({
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <form action={createJudge} className="card h-fit space-y-4">
-          <h2 className="text-lg font-bold">Add judge</h2>
+          <h2 className="text-lg font-bold">Add judge or host</h2>
+          <select name="role" defaultValue="judge" className="field">
+            <option value="judge">Judge: scores performances</option>
+            <option value="host">Host (MC): reads out who&apos;s next, calls performers</option>
+          </select>
           <input name="full_name" required placeholder="Full name" className="field" />
           <input name="email" type="email" required placeholder="Email (used to sign in)" className="field" />
           <input name="password" type="text" required minLength={8} placeholder="Temporary password (8+ chars)" className="field" autoComplete="off" />
-          <SubmitButton className="btn-primary w-full">Create judge account</SubmitButton>
+          <SubmitButton className="btn-primary w-full">Create account</SubmitButton>
         </form>
         <section className="space-y-2">
           <h2 className="text-lg font-bold">Judges</h2>
           {judges.length === 0 && <p className="card text-sm text-muted">No judges yet.</p>}
           {judges.map((j) => (
-            <details key={j.id} className="card">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                <span className="font-semibold">{j.full_name}</span>
-                <span className={`text-xs ${j.active ? "text-emerald-300" : "text-muted"}`}>
-                  {j.active ? "Active" : "Inactive"}
-                </span>
-              </summary>
-              <div className="mt-3 flex flex-col gap-2 border-t border-line/60 pt-3 sm:flex-row">
-                <form action={resetJudgePassword} className="flex flex-1 gap-2">
-                  <input type="hidden" name="id" value={j.id} />
-                  <input name="password" minLength={8} required placeholder="New password" className="field" autoComplete="off" />
-                  <SubmitButton className="btn-ghost text-sm">Set</SubmitButton>
-                </form>
-                <form action={setJudgeActive}>
-                  <input type="hidden" name="id" value={j.id} />
-                  <input type="hidden" name="active" value={String(!j.active)} />
-                  <SubmitButton className="btn-ghost w-full text-sm">{j.active ? "Deactivate" : "Activate"}</SubmitButton>
-                </form>
-              </div>
-            </details>
+            <PersonCard key={j.id} person={j} />
+          ))}
+          <h2 className="pt-3 text-lg font-bold">Hosts</h2>
+          {hosts.length === 0 && (
+            <p className="card text-sm text-muted">No host yet. The host signs in and is taken to the Host page.</p>
+          )}
+          {hosts.map((h) => (
+            <PersonCard key={h.id} person={h} />
           ))}
         </section>
       </div>

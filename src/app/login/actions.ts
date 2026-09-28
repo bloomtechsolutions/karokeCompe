@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { homeFor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { Role } from "@/lib/types";
 
 export type LoginState = { error?: string };
 
@@ -24,7 +26,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     await supabase.auth.signOut();
     return { error: "Your account is not active. Contact the organiser." };
   }
-  redirect(profile.role === "admin" ? "/admin" : "/judge");
+  redirect(homeFor(profile.role as Role));
 }
 
 export async function logout() {

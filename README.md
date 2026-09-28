@@ -7,6 +7,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 | `/` Dashboard | Everyone, built for a TV: live leaderboards, "now on stage" spotlight, voting QR, winners podium | No |
 | `/vote` Audience vote | Audience during the final | No (staff ID; one vote per staff ID and IP per category) |
 | `/judge` Scoring | Judges | Yes |
+| `/host` Host (MC) cue cards | Host: who's on stage, who's next, what to say, call the next act | Yes (Host account, or organiser) |
 | `/admin` Organiser panel | Organiser | Yes |
 
 ## How the competition works in the app
@@ -39,6 +40,8 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 - **When voting opens:** moving to the Final Round arms voting. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
 
 **Hide scores.** Turn off *Show scores on public dashboard* to keep results secret until the announcement. The organiser can still see everything.
+
+**Host (MC).** In *Admin → Judges*, use **Add judge or host** and pick *Host (MC)*. The host's `/host` page shows ready-to-read scripts for each moment (opening, introducing the next act, after each song, finalists, voting, winners) and a **Call to the stage** button that sets *Now on stage* for the TV and judges.
 
 ## TV dashboard
 
