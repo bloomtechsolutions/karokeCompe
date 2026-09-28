@@ -117,7 +117,7 @@ function Round1Row({
   const flash = useFlash(`${r.r1_judges}|${score}`);
   return (
     <div
-      className={`flex h-full items-center gap-[0.8rem] rounded-2xl px-[0.7rem] py-[0.45rem] ${flash ? "row-flash" : ""} ${
+      className={`flex h-full items-center gap-[0.8rem] rounded-2xl px-[0.7rem] py-[0.35rem] ${flash ? "row-flash" : ""} ${
         onStage ? "bg-accent/15 ring-2 ring-accent-2" : "bg-bg/35 ring-1 ring-line/40"
       }`}
     >
@@ -132,9 +132,11 @@ function Round1Row({
             </span>
           )}
         </div>
-        <div className="mt-[0.2rem] flex items-center gap-[0.6rem]">
-          <span className="truncate text-[0.85rem] text-muted">♪ {r.song_round1 ?? "Song TBA"}</span>
-        </div>
+        {r.song_round1 && (
+          <div className="mt-[0.2rem] flex items-center gap-[0.6rem]">
+            <span className="truncate text-[0.85rem] text-muted">♪ {r.song_round1}</span>
+          </div>
+        )}
         {showScores && (
           <div className="mt-[0.35rem] h-[0.4rem] overflow-hidden rounded-full bg-bg/70">
             <div
@@ -195,7 +197,7 @@ export function Round1Board({
         <AutoScroll className="relative -mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
           <div
             className="grid gap-[0.5rem] py-[0.2rem]"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(15.5rem, 1fr))", ...(compact ? { zoom: COMPACT_ZOOM } : {}) }}
           >
             {ranked.map((r, i) => (
               <Fragment key={r.contestant_id}>
@@ -262,7 +264,7 @@ function FinalRow({
             <span className="line-clamp-2 text-[1.3rem] leading-tight font-bold">{r.name}</span>
             {onStage && <span className="shrink-0 text-[1.1rem]">🎤</span>}
           </div>
-          <span className="block truncate text-[0.85rem] text-muted">♪ {r.song_final ?? "Song TBA"}</span>
+          {r.song_final && <span className="block truncate text-[0.85rem] text-muted">♪ {r.song_final}</span>}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-[0.3rem]">
           <span className="text-[2.2rem] leading-none font-extrabold">

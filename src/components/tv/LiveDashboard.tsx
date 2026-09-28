@@ -8,7 +8,7 @@ import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
 import { activeFinalCategories, categoryVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
-import { IdleHero, IdleStage, type NextUp } from "./IdleStage";
+import { IdleHero, IdleStage, LogoOrb, type NextUp } from "./IdleStage";
 import { TvChrome } from "./TvChrome";
 
 export type DashboardProps = {
@@ -32,6 +32,8 @@ export function LiveDashboard(props: DashboardProps) {
   const openCategories = CATEGORIES.filter((c) => categoryVoting(rows, c, nowPerforming).ready);
   const showVote = stage === "final" && props.votingOpen && props.vote != null && openCategories.length > 0;
   const hasSide = onStage != null || showVote;
+  // The logo show replaces the header (it already names the event and stage).
+  const idle = stage === "setup" || (live && !hasSide);
   // In the final, show only the category being performed or voted on.
   const boardCategories = stage === "final" ? activeFinalCategories(rows, nowPerforming) : CATEGORIES;
   // Running order for the current round: who's performed and who's next.
@@ -53,10 +55,10 @@ export function LiveDashboard(props: DashboardProps) {
   return (
     <div className="tv-root relative flex min-h-dvh flex-col overflow-hidden lg:h-dvh">
       <Backdrop />
-      <TopBar {...props} />
+      {!idle && <TopBar {...props} />}
       {live && showScores && <LeaderBanner stage={stage} rows={rows} judgeWeight={props.judgeWeight} />}
 
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col px-[1.5rem] pb-[1.5rem]">
+      <main className={`relative z-10 flex min-h-0 flex-1 flex-col px-[1.5rem] pb-[1.5rem] ${idle ? "pt-[1.5rem]" : ""}`}>
         {stage === "setup" && <SetupView rows={rows} />}
 
         {live && (
@@ -147,18 +149,11 @@ function Backdrop() {
   );
 }
 
-function TopBar({ eventName, stage, votingOpen, voteTotal }: DashboardProps) {
-  const [first, ...rest] = eventName.split(" ");
+function TopBar({ stage, votingOpen, voteTotal }: DashboardProps) {
   const live = stage === "round1" || stage === "final";
   const votePulse = useFlash(voteTotal, 1200);
   return (
-    <header className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-[1.5rem] py-[1rem]">
-      <div className="flex items-center gap-[0.9rem] leading-none">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/united-bml-shield.png" alt="United BML" className="h-[3.2rem] w-auto" />
-        <span className="text-[2rem] font-extrabold tracking-wide uppercase">{first}</span>
-        {rest.length > 0 && <span className="font-script text-[2.6rem] text-accent-2">{rest.join(" ")}</span>}
-      </div>
+    <header className="relative z-10 flex flex-wrap items-center justify-end gap-x-4 gap-y-2 px-[1.5rem] py-[0.8rem]">
       <div className="flex flex-wrap items-center gap-[0.8rem]">
         {stage === "final" && votingOpen && voteTotal > 0 && (
           <span
@@ -265,8 +260,11 @@ function VotePanel({
         dangerouslySetInnerHTML={{ __html: vote.svg }}
       />
       <div className={compact ? "min-w-0 flex-1" : ""}>
-        <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[2rem]" : "text-[3.2rem]"}`}>
-          Scan to vote!
+        <div className={`flex items-center gap-[1rem] ${compact ? "" : "justify-center"}`}>
+          <LogoOrb size={compact ? "3.6rem" : "6rem"} minimal />
+          <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[1.7rem]" : "text-[3.2rem]"}`}>
+            Scan to vote!
+          </div>
         </div>
         <div className={`font-semibold text-gold ${compact ? "text-[1.15rem]" : "text-[1.5rem]"}`}>
           {openCategories.map((c) => CATEGORY_LABEL[c]).join(" & ")} voting is open

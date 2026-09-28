@@ -417,3 +417,84 @@ html.tv-idle * {
     animation: none;
   }
 }
+
+/* Notes orbiting the record */
+.note-orbit {
+  animation: spin 14s linear infinite;
+}
+.note-orbit > span {
+  animation: spin 14s linear infinite reverse;
+}
+
+/* Notes streaming up across the whole panel */
+.note-stream {
+  animation: note-stream linear infinite;
+}
+
+@keyframes note-stream {
+  0% {
+    transform: translate(0, 0) rotate(-12deg) scale(0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(var(--sway, 20px), -55cqh) rotate(10deg) scale(1);
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(calc(var(--sway, 20px) * -0.6), -115cqh) rotate(-8deg) scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* Stage lights sweeping inside the panel */
+.stage-beam {
+  position: absolute;
+  top: -30%;
+  width: 18%;
+  height: 170%;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.16), rgb(244 114 160 / 0.08) 50%, transparent 80%);
+  filter: blur(14px);
+  transform-origin: top center;
+  animation: stage-beam 7s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+@keyframes stage-beam {
+  from {
+    transform: rotate(-28deg);
+  }
+  to {
+    transform: rotate(28deg);
+  }
+}
+
+/* Record-player arm */
+.tonearm {
+  transform-origin: 85% 12%;
+  animation: tonearm 2.4s ease-in-out infinite;
+}
+
+@keyframes tonearm {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(1.8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-orbit,
+  .note-orbit > span,
+  .note-stream,
+  .stage-beam,
+  .tonearm {
+    animation: none;
+  }
+}
