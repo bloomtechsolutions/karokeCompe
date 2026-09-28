@@ -43,15 +43,17 @@ export function LiveDashboard(props: DashboardProps) {
 
         {live && (
           <div
-            className={`grid min-h-0 flex-1 grid-cols-1 gap-[1.2rem] ${
-              hasSide
-                ? "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]"
-                : "lg:grid-cols-2"
+            className={`grid min-h-0 flex-1 grid-cols-1 gap-[1.2rem] transition-[grid-template-columns] duration-700 ${
+              onStage
+                ? "lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                : hasSide
+                  ? "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)_minmax(0,1.25fr)]"
+                  : "lg:grid-cols-2"
             }`}
           >
             {hasSide && (
               <div className="flex min-h-0 flex-col gap-[1.2rem]">
-                {onStage && <Spotlight row={onStage} {...props} />}
+                {onStage && <Spotlight row={onStage} {...props} tight={showVote} />}
                 {showVote && <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />}
               </div>
             )}
@@ -65,6 +67,7 @@ export function LiveDashboard(props: DashboardProps) {
                   showScores={showScores}
                   finalists={props.finalistsPerCategory}
                   nowPerforming={nowPerforming}
+                  compact={onStage != null}
                 />
               ) : (
                 <FinalBoard
@@ -76,6 +79,7 @@ export function LiveDashboard(props: DashboardProps) {
                   showScores={showScores}
                   votingOpen={props.votingOpen}
                   nowPerforming={nowPerforming}
+                  compact={onStage != null}
                 />
               ),
             )}
@@ -157,36 +161,42 @@ function Spotlight({
   stage,
   judgeCount,
   showScores,
-}: DashboardProps & { row: LeaderboardRow }) {
+  tight,
+}: DashboardProps & { row: LeaderboardRow; tight: boolean }) {
   const isFinal = stage === "final";
   const done = isFinal ? row.final_judges : row.r1_judges;
   const avg = isFinal ? row.final_avg : row.r1_avg;
   const song = isFinal ? row.song_final : row.song_round1;
   const allIn = judgeCount > 0 && done >= judgeCount;
+  // Long names (typically duets) and a shared column (voting QR below) get smaller type.
+  const long = row.name.length > 20;
+  const nameSize = tight
+    ? long ? "lg:text-[2.8rem]" : "lg:text-[3.8rem]"
+    : long ? "lg:text-[4rem]" : "lg:text-[5.2rem]";
 
   return (
     <section
       key={row.contestant_id}
       className="glow-pulse pop-in relative flex flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-accent/70 bg-gradient-to-b from-accent/25 to-panel/80 p-[1.4rem] text-center lg:flex-1"
     >
-      <div className="text-[0.95rem] font-bold tracking-[0.35em] text-accent-2 uppercase">🎤 Now on stage</div>
-      <div className="mt-[0.6rem] text-[0.8rem] tracking-widest text-muted uppercase">
+      <div className="text-[1.4rem] font-bold tracking-[0.35em] text-accent-2 uppercase">🎤 Now on stage</div>
+      <div className="mt-[0.8rem] text-[1.1rem] tracking-widest text-muted uppercase">
         {CATEGORY_LABEL[row.category]}
         {row.department ? ` · ${row.department}` : ""}
       </div>
-      <h2 className="mt-[0.4rem] text-[3rem] leading-[1.05] font-extrabold break-words">{row.name}</h2>
-      <p className="mt-[0.6rem] text-[1.3rem] text-muted">♪ {song ?? "Song TBA"}</p>
+      <h2 className={`mt-[0.6rem] text-[2.4rem] leading-[1.05] font-extrabold text-balance break-words ${nameSize}`}>{row.name}</h2>
+      <p className={`mt-[0.8rem] text-[1.3rem] text-muted ${tight ? "lg:text-[1.6rem]" : "lg:text-[2.1rem]"}`}>♪ {song ?? "Song TBA"}</p>
 
-      <div className="mt-[1.4rem] flex flex-col items-center gap-[0.6rem]">
+      <div className={`${tight ? "mt-[1rem]" : "mt-[2rem]"} flex flex-col items-center gap-[0.8rem]`}>
         {allIn && showScores && avg != null ? (
           <div className="pop-in">
-            <div className="text-[0.85rem] tracking-[0.3em] text-muted uppercase">Judges&apos; score</div>
-            <div className="text-[4.5rem] leading-none font-extrabold text-gold">
+            <div className="text-[1.1rem] tracking-[0.3em] text-muted uppercase">Judges&apos; score</div>
+            <div className={`text-[4.5rem] leading-none font-extrabold text-gold ${tight ? "lg:text-[5rem]" : "lg:text-[7.5rem]"}`}>
               <AnimatedNumber value={Number(avg)} duration={1800} />
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-[1.1rem] text-muted">
+          <div className="flex items-center gap-2 text-[1.1rem] text-muted lg:text-[1.6rem]">
             {allIn ? "All judges have scored" : "Judges are scoring"}
             {!allIn && (
               <span className="inline-flex gap-1">
@@ -199,8 +209,8 @@ function Spotlight({
             )}
           </div>
         )}
-        <JudgeDots done={done} total={judgeCount} size="1rem" />
-        <span className="text-[0.85rem] text-muted tabular-nums">
+        <JudgeDots done={done} total={judgeCount} size="1.5rem" />
+        <span className="text-[1.1rem] text-muted tabular-nums">
           {done}/{judgeCount} judges
         </span>
       </div>

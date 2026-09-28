@@ -7,6 +7,10 @@ import { AnimatedNumber } from "./AnimatedNumber";
 import { AutoScroll } from "./AutoScroll";
 import { useFlash, useFlip } from "./hooks";
 
+// While someone is on stage the spotlight takes most of the screen and the
+// leaderboards shrink to fit beside it.
+const COMPACT_ZOOM = 0.72;
+
 const MEDAL = ["bg-gold text-bg", "bg-zinc-200 text-bg", "bg-amber-700 text-white"];
 
 function RankBadge({ rank, show }: { rank: number | null; show: boolean }) {
@@ -37,17 +41,23 @@ export function JudgeDots({ done, total, size = "0.55rem" }: { done: number; tot
 function BoardShell({
   title,
   subtitle,
+  compact = false,
   children,
 }: {
   title: string;
   subtitle: React.ReactNode;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <section className="flex min-h-0 flex-col rounded-3xl border border-line/70 bg-panel/70 p-[1.2rem] backdrop-blur-sm">
       <div className="mb-[0.8rem] flex items-baseline justify-between gap-3">
-        <h2 className="text-[1.7rem] leading-none font-extrabold tracking-wide uppercase">{title}</h2>
-        <span className="text-right text-[0.85rem] text-muted">{subtitle}</span>
+        <h2
+          className={`leading-none font-extrabold tracking-wide uppercase ${compact ? "text-[1.3rem]" : "text-[1.7rem]"}`}
+        >
+          {title}
+        </h2>
+        <span className={`text-right text-muted ${compact ? "text-[0.7rem]" : "text-[0.85rem]"}`}>{subtitle}</span>
       </div>
       {children}
     </section>
@@ -119,6 +129,7 @@ export function Round1Board({
   showScores,
   finalists,
   nowPerforming,
+  compact = false,
 }: {
   category: Category;
   rows: LeaderboardRow[];
@@ -126,6 +137,7 @@ export function Round1Board({
   showScores: boolean;
   finalists: number;
   nowPerforming: string | null;
+  compact?: boolean;
 }) {
   // With scores hidden, list in running order so the order leaks nothing.
   const ranked = showScores
@@ -142,12 +154,13 @@ export function Round1Board({
     <BoardShell
       title={CATEGORY_LABEL[category]}
       subtitle={showScores ? `Top ${finalists} go to the final` : "Scores revealed later"}
+      compact={compact}
     >
       {ranked.length === 0 ? (
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Performers coming soon…</p>
       ) : (
         <AutoScroll className="relative -mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
-          <div className="space-y-[0.3rem] py-[0.2rem]">
+          <div className="space-y-[0.3rem] py-[0.2rem]" style={compact ? { zoom: COMPACT_ZOOM } : undefined}>
             {ranked.map((r, i) => (
               <div key={r.contestant_id} ref={flipRef(r.contestant_id)}>
                 <Round1Row
@@ -264,6 +277,7 @@ export function FinalBoard({
   showScores,
   votingOpen,
   nowPerforming,
+  compact = false,
 }: {
   category: Category;
   rows: LeaderboardRow[];
@@ -272,6 +286,7 @@ export function FinalBoard({
   showScores: boolean;
   votingOpen: boolean;
   nowPerforming: string | null;
+  compact?: boolean;
 }) {
   const voting = categoryVoting(rows, category, nowPerforming);
   const ranked = showScores
@@ -286,6 +301,7 @@ export function FinalBoard({
   return (
     <BoardShell
       title={`${CATEGORY_LABEL[category]} Final`}
+      compact={compact}
       subtitle={
         votingOpen ? (
           voting.ready ? (
@@ -302,7 +318,7 @@ export function FinalBoard({
         <p className="py-[2rem] text-center text-[1.1rem] text-muted">Finalists to be announced…</p>
       ) : (
         <AutoScroll className="-mx-[0.3rem] min-h-0 flex-1 px-[0.3rem]">
-          <div className="space-y-[0.4rem] py-[0.2rem]">
+          <div className="space-y-[0.4rem] py-[0.2rem]" style={compact ? { zoom: COMPACT_ZOOM } : undefined}>
             {ranked.map((r) => (
               <div key={r.contestant_id} ref={flipRef(r.contestant_id)}>
                 <FinalRow
