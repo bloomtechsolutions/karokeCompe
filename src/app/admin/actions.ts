@@ -128,7 +128,8 @@ export async function nextOnStage() {
     .filter((c) => !isFinal || c.is_finalist)
     .sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
   if (queue.length === 0) fail("No performers in this round.");
-  const idx = queue.findIndex((c) => c.id === settings.now_performing);
+  const anchor = settings.now_performing ?? settings.last_on_stage;
+  const idx = queue.findIndex((c) => c.id === anchor);
   const next = queue[idx + 1] ?? null;
   const { error: upErr } = await supabase
     .from("settings")

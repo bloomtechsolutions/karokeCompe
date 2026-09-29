@@ -14,6 +14,8 @@ export type Settings = {
   finalists_per_category: number;
   judge_weight: number;
   now_performing: string | null;
+  /** Last performer called to the stage this round (kept after the stage is cleared). */
+  last_on_stage: string | null;
 };
 
 export type Contestant = {

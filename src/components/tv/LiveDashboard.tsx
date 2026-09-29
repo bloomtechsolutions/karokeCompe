@@ -6,7 +6,7 @@ import { rankFinal, rankRound1 } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
-import { activeFinalCategories, categoryVoting } from "@/lib/voting";
+import { activeFinalCategories, categoryVoting, nextInLine } from "@/lib/voting";
 import { useFlash } from "./hooks";
 import { IdleHero, IdleStage, LogoOrb, type NextUp } from "./IdleStage";
 import { TvChrome } from "./TvChrome";
@@ -19,6 +19,7 @@ export type DashboardProps = {
   finalistsPerCategory: number;
   judgeWeight: number;
   nowPerforming: string | null;
+  lastOnStage: string | null;
   rows: LeaderboardRow[];
   judgeCount: number;
   voteTotal: number;
@@ -38,15 +39,13 @@ export function LiveDashboard(props: DashboardProps) {
   const boardCategories = stage === "final" ? activeFinalCategories(rows, nowPerforming) : CATEGORIES;
   // Running order for the current round: who's performed and who's next.
   const isFinal = stage === "final";
+  const orderOf = (r: LeaderboardRow) => (isFinal ? r.final_order : r.performance_order) ?? 999;
   const queue = rows
     .filter((r) => !isFinal || r.is_finalist)
-    .sort(
-      (a, b) =>
-        ((isFinal ? a.final_order : a.performance_order) ?? 999) -
-        ((isFinal ? b.final_order : b.performance_order) ?? 999),
-    );
+    .sort((a, b) => orderOf(a) - orderOf(b) || a.name.localeCompare(b.name));
   const judged = (r: LeaderboardRow) => (isFinal ? r.final_judges : r.r1_judges) > 0;
-  const next = queue.find((r) => !judged(r) && r.contestant_id !== nowPerforming) ?? null;
+  const next =
+    nextInLine(queue, (r) => r.contestant_id, nowPerforming ?? props.lastOnStage, judged)[0] ?? null;
   const nextUp: NextUp = next
     ? { name: next.name, category: next.category, song: isFinal ? next.song_final : next.song_round1 }
     : null;

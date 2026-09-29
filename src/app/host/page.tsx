@@ -7,7 +7,7 @@ import { getLeaderboard, getSettings } from "@/lib/data";
 import { fmt, rankFinal, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types";
-import { categoryVoting } from "@/lib/voting";
+import { categoryVoting, nextInLine } from "@/lib/voting";
 import { logout } from "../login/actions";
 import { callToStage, clearStage } from "./actions";
 
@@ -56,9 +56,16 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
   const songOf = (r: LeaderboardRow) => (isFinal ? r.song_final : r.song_round1);
   const orderOf = (r: LeaderboardRow) => (isFinal ? r.final_order : r.performance_order) ?? 999;
   const judgedCount = (r: LeaderboardRow) => (isFinal ? r.final_judges : r.r1_judges);
-  const queue = rows.filter((r) => !isFinal || r.is_finalist).sort((a, b) => orderOf(a) - orderOf(b));
+  const queue = rows
+    .filter((r) => !isFinal || r.is_finalist)
+    .sort((a, b) => orderOf(a) - orderOf(b) || a.name.localeCompare(b.name));
   const current = rows.find((r) => r.contestant_id === settings.now_performing) ?? null;
-  const upcoming = queue.filter((r) => judgedCount(r) === 0 && r.contestant_id !== settings.now_performing);
+  const upcoming = nextInLine(
+    queue,
+    (r) => r.contestant_id,
+    settings.now_performing ?? settings.last_on_stage,
+    (r) => judgedCount(r) > 0,
+  );
   const next = upcoming[0] ?? null;
   const onDeck = upcoming.slice(1, 3);
   const done = queue.filter((r) => judgedCount(r) > 0).length;

@@ -27,6 +27,7 @@ export default async function DashboardPage() {
         finalistsPerCategory={settings.finalists_per_category}
         judgeWeight={Number(settings.judge_weight)}
         nowPerforming={settings.now_performing}
+        lastOnStage={settings.last_on_stage}
         rows={rows}
         judgeCount={(judgeCountRes.data as number | null) ?? 0}
         voteTotal={(voteTotalRes.data as number | null) ?? 0}

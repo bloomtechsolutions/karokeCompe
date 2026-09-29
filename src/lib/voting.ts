@@ -36,3 +36,20 @@ export function activeFinalCategories(rows: LeaderboardRow[], nowPerforming: str
   const withFinalists = all.filter((c) => rows.some((r) => r.category === c && r.is_finalist));
   return withFinalists.length > 0 ? withFinalists : all;
 }
+
+/**
+ * Who is up next: the performers after whoever is on stage (or was last
+ * called), in running order, skipping anyone who has already performed.
+ * Earlier performers who were skipped come last.
+ */
+export function nextInLine<T>(
+  queue: T[],
+  idOf: (item: T) => string,
+  anchorId: string | null,
+  performed: (item: T) => boolean,
+): T[] {
+  const idx = anchorId ? queue.findIndex((c) => idOf(c) === anchorId) : -1;
+  return [...queue.slice(idx + 1), ...queue.slice(0, Math.max(idx, 0))].filter(
+    (c) => idOf(c) !== anchorId && !performed(c),
+  );
+}

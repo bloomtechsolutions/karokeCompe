@@ -5,6 +5,7 @@ import { requireJudge } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_LABEL, type Contestant, type Score } from "@/lib/types";
+import { nextInLine } from "@/lib/voting";
 import { logout } from "../login/actions";
 import { ScoreCard } from "./ScoreCard";
 
@@ -35,12 +36,9 @@ export default async function JudgePage() {
   );
 
   const current = queue.find((c) => c.id === settings.now_performing) ?? null;
-  const currentIdx = current ? queue.indexOf(current) : -1;
   const performed = (c: Contestant) => c !== current && (anyScores.get(c.id) ?? 0) > 0;
   // Up next: not yet performed, starting after whoever is on stage.
-  const upNext = [...queue.slice(currentIdx + 1), ...queue.slice(0, Math.max(currentIdx, 0))].filter(
-    (c) => c !== current && !performed(c),
-  );
+  const upNext = nextInLine(queue, (c) => c.id, settings.now_performing ?? settings.last_on_stage, performed);
   const missed = queue.filter((c) => performed(c) && !myScores.has(c.id));
   const done = queue.filter((c) => myScores.has(c.id)).length;
 
