@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { requireAdmin } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { getVoteLink } from "@/lib/qr";
-import { categoryVoting } from "@/lib/voting";
+import { stageVoting } from "@/lib/voting";
 import { fmt, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -143,7 +143,7 @@ export default async function AdminPage({
             <h2 className="text-lg font-bold">1st Round</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {CATEGORIES.map((category) => {
-                const ranked = rankRound1(rows, category);
+                const ranked = rankRound1(rows, category, judgeWeight);
                 return (
                   <section key={category} className="card">
                     <div className="mb-3 flex items-center justify-between gap-2">
@@ -162,10 +162,12 @@ export default async function AdminPage({
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium">{r.name}</div>
                             <div className="text-xs text-muted">
-                              {fmt(r.r1_avg, 2)} avg · vocal {fmt(r.r1_vocal_avg, 1)} · {r.r1_judges}/
-                              {activeJudges.length} judges
+                              Judges {fmt(r.r1_avg, 2)} avg ({fmt(r.judgePoints, 1)}/{judgeWeight}) · 🗳{" "}
+                              {r.r1_votes ?? 0} votes ({fmt(r.audiencePoints, 1)}/{100 - judgeWeight}) · vocal{" "}
+                              {fmt(r.r1_vocal_avg, 1)} · {r.r1_judges}/{activeJudges.length} judges
                             </div>
                           </div>
+                          <span className="w-14 text-right text-lg font-extrabold tabular-nums">{fmt(r.score, 1)}</span>
                           <form action={toggleFinalist}>
                             <input type="hidden" name="id" value={r.contestant_id} />
                             <input type="hidden" name="value" value={String(!r.is_finalist)} />
@@ -201,9 +203,9 @@ export default async function AdminPage({
               ))}
             </div>
             <p className="text-xs text-muted">
-              Final score = judges&apos; average × {judgeWeight}% + audience points. The finalist with the most
-              votes in a category gets the full {100 - judgeWeight} audience points; others get points in
-              proportion to the leader&apos;s votes. Ties are broken by vocal quality.
+              Each round&apos;s score = judges&apos; average × {judgeWeight}% + audience points. The performer
+              with the most votes in a category (that round) gets the full {100 - judgeWeight} audience points;
+              others get points in proportion to the leader&apos;s votes. Ties are broken by vocal quality.
             </p>
           </div>
         )}
@@ -462,18 +464,21 @@ async function ControlTab({
         </div>
         <form action={setVoting}>
           <input type="hidden" name="open" value={String(!votingOpen)} />
-          <SubmitButton className={votingOpen ? "btn-ghost w-full" : "btn-primary w-full"} disabled={stage !== "final"}>
-            {votingOpen ? "Close voting" : "Open voting"}
+          <SubmitButton
+            className={votingOpen ? "btn-ghost w-full" : "btn-primary w-full"}
+            disabled={stage !== "final" && stage !== "round1"}
+          >
+            {votingOpen ? `Close ${STAGE_LABEL[stage]} voting` : "Open voting"}
           </SubmitButton>
         </form>
-        {stage !== "final" ? (
+        {stage !== "final" && stage !== "round1" ? (
           <p className="text-xs text-muted">
-            Voting is armed automatically when you move to the Final Round.
+            Voting is armed automatically when you start the 1st Round or the Final Round.
           </p>
         ) : (
           <ul className="space-y-1.5 text-sm">
             {CATEGORIES.map((c) => {
-              const v = categoryVoting(rows, c, nowPerforming);
+              const v = stageVoting(stage, rows, c, nowPerforming);
               return (
                 <li key={c} className="flex items-center justify-between rounded-lg bg-bg/50 px-3 py-2">
                   <span className="font-medium">{CATEGORY_LABEL[c]}</span>
@@ -485,14 +490,20 @@ async function ControlTab({
                     {!votingOpen
                       ? "Closed"
                       : v.ready
-                        ? "Voting open"
-                        : `Waiting · ${v.performed}/${v.total} performed`}
+                        ? stage === "round1"
+                          ? `Voting open · ${v.performed}/${v.total} on the ballot`
+                          : "Voting open"
+                        : stage === "round1"
+                          ? "Waiting for the first performer"
+                          : `Waiting · ${v.performed}/${v.total} performed`}
                   </span>
                 </li>
               );
             })}
             <li className="text-xs text-muted">
-              Each category opens by itself once all its finalists have been scored and left the stage.
+              {stage === "round1"
+                ? "Each category opens when its first performer is called to the stage, and performers join the ballot as they go on. Voting stays open until you close it (moving to the Final also ends 1st round voting)."
+                : "Each category opens by itself once all its finalists have been scored and left the stage."}
             </li>
           </ul>
         )}
@@ -501,7 +512,7 @@ async function ControlTab({
           <div className="text-center text-sm sm:text-left">
             <div className="font-bold">Scan to vote</div>
             <div className="break-all">{voteUrl}</div>
-            <div className="mt-1 text-xs text-zinc-600">Show this on the screen during the final.</div>
+            <div className="mt-1 text-xs text-zinc-600">Shown on the TV while voting is open.</div>
           </div>
         </div>
       </section>
@@ -727,12 +738,12 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
   const [votesRes, attemptsRes] = await Promise.all([
     supabase
       .from("audience_votes")
-      .select("id, contestant_id, category, voter_ref, voter_ip, created_at")
+      .select("id, contestant_id, category, round, voter_ref, voter_ip, created_at")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
       .from("vote_attempts")
-      .select("id, contestant_id, category, voter_ref, voter_ip, result, created_at")
+      .select("id, contestant_id, category, round, voter_ref, voter_ip, result, created_at")
       .order("created_at", { ascending: false })
       .limit(200),
   ]);
@@ -740,6 +751,7 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
     id: string | number;
     contestant_id: string | null;
     category: string | null;
+    round: string | null;
     voter_ref: string | null;
     voter_ip: string | null;
     created_at: string;
@@ -759,6 +771,7 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
             <th className="py-2 pr-3 font-medium">Time</th>
             <th className="py-2 pr-3 font-medium">Staff ID</th>
             <th className="py-2 pr-3 font-medium">IP address</th>
+            <th className="py-2 pr-3 font-medium">Round</th>
             <th className="py-2 pr-3 font-medium">Category</th>
             <th className="py-2 pr-3 font-medium">{blocked ? "Tried to vote for" : "Voted for"}</th>
             {blocked && <th className="py-2 font-medium">Blocked because</th>}
@@ -770,6 +783,9 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
               <td className="py-2 pr-3 whitespace-nowrap tabular-nums">{time(v.created_at)}</td>
               <td className="py-2 pr-3 font-medium">{v.voter_ref ?? "—"}</td>
               <td className="py-2 pr-3 font-mono text-xs">{v.voter_ip ?? "—"}</td>
+              <td className="py-2 pr-3 whitespace-nowrap">
+                {v.round === "round1" ? "1st Round" : v.round === "final" ? "Final" : "—"}
+              </td>
               <td className="py-2 pr-3">{v.category ? CATEGORY_LABEL[v.category as "solo" | "duet"] : "—"}</td>
               <td className="py-2 pr-3">{(v.contestant_id && names.get(v.contestant_id)) ?? "—"}</td>
               {blocked && (

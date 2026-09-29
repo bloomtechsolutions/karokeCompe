@@ -20,12 +20,12 @@ export async function GET() {
 
   const lines: unknown[][] = [
     ["Round", "Category", "Rank", "Name", "Department", "Song", "Judges scored", "Judge avg (/100)",
-     `Judge points (/${judgeWeight})`, "Votes", `Audience points (/${100 - judgeWeight})`, "Final score", "Finalist"],
+     `Judge points (/${judgeWeight})`, "Votes", `Audience points (/${100 - judgeWeight})`, "Round score", "Finalist"],
   ];
   for (const c of CATEGORIES) {
-    for (const r of rankRound1(rows, c)) {
+    for (const r of rankRound1(rows, c, judgeWeight)) {
       lines.push(["1st Round", c, r.rank, r.name, r.department, r.song_round1, r.r1_judges, r.r1_avg,
-        "", "", "", r.r1_avg, r.is_finalist ? "Yes" : "No"]);
+        r.judgePoints, r.r1_votes, r.audiencePoints, r.score, r.is_finalist ? "Yes" : "No"]);
     }
   }
   for (const c of CATEGORIES) {

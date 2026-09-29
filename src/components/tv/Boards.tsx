@@ -69,10 +69,11 @@ function BoardShell({
 }) {
   return (
     <section
-      className={`flex min-h-0 gap-[1.2rem] rounded-3xl border border-line/70 bg-panel/70 p-[1.1rem] backdrop-blur-sm ${
+      className={`flex min-h-0 gap-[1.2rem] rounded-3xl border border-line/70 bg-panel/70 p-[1.1rem] backdrop-blur-sm lg:basis-0 ${
         sideTitle ? "flex-col lg:flex-row" : "flex-col"
       }`}
-      style={{ flexGrow: Math.max(grow, 1), flexBasis: 0 }}
+      // Share the TV's fixed height by tile rows; on phones the page just scrolls.
+      style={{ flexGrow: Math.max(grow, 1) }}
     >
       <div
         className={`flex shrink-0 gap-3 ${
@@ -100,17 +101,19 @@ function BoardShell({
 function Round1Row({
   r,
   judgeCount,
+  judgeWeight,
   showScores,
   onStage,
   displayRank,
 }: {
   r: Round1Result;
   judgeCount: number;
+  judgeWeight: number;
   showScores: boolean;
   onStage: boolean;
   displayRank: number | null;
 }) {
-  const score = r.r1_avg == null ? null : Number(r.r1_avg);
+  const score = r.score;
   const flash = useFlash(`${r.r1_judges}|${score}`);
   return (
     <div
@@ -135,10 +138,17 @@ function Round1Row({
           </div>
         )}
         {showScores && (
-          <div className="mt-[0.35rem] h-[0.4rem] overflow-hidden rounded-full bg-bg/70">
+          <div
+            className="mt-[0.35rem] flex h-[0.4rem] overflow-hidden rounded-full bg-bg/70"
+            title={`Judges ${judgeWeight}% · Audience ${100 - judgeWeight}%`}
+          >
             <div
-              className="h-full rounded-full bg-gradient-to-r from-accent to-accent-2 transition-[width] duration-1000 ease-out"
-              style={{ width: `${score ?? 0}%` }}
+              className="h-full bg-gradient-to-r from-accent to-accent-2 transition-[width] duration-1000 ease-out"
+              style={{ width: `${r.judgePoints ?? 0}%` }}
+            />
+            <div
+              className="h-full bg-gold transition-[width] duration-1000 ease-out"
+              style={{ width: `${r.judgePoints == null ? 0 : (r.audiencePoints ?? 0)}%` }}
             />
           </div>
         )}
@@ -147,7 +157,10 @@ function Round1Row({
         <span className="text-[1.9rem] leading-none font-extrabold">
           {showScores && score != null ? <AnimatedNumber value={score} /> : r.r1_judges > 0 ? "✓" : "—"}
         </span>
-        <JudgeDots done={r.r1_judges} total={judgeCount} />
+        <div className="flex items-center gap-[0.4rem]">
+          {r.r1_votes != null && r.r1_started && <VoteCount votes={r.r1_votes} />}
+          <JudgeDots done={r.r1_judges} total={judgeCount} />
+        </div>
       </div>
     </div>
   );
@@ -160,6 +173,7 @@ export function Round1Board({
   showScores,
   finalists,
   nowPerforming,
+  judgeWeight,
   compact = false,
 }: {
   category: Category;
@@ -168,23 +182,29 @@ export function Round1Board({
   showScores: boolean;
   finalists: number;
   nowPerforming: string | null;
+  judgeWeight: number;
   compact?: boolean;
 }) {
   // With scores hidden, list in running order so the order leaks nothing.
   const ranked = showScores
-    ? rankRound1(rows, category)
+    ? rankRound1(rows, category, judgeWeight)
     : rankRound1(
         [...rows].sort((a, b) => (a.performance_order ?? 999) - (b.performance_order ?? 999)),
         category,
+        judgeWeight,
       );
   const flipRef = useFlip(ranked.map((r) => r.contestant_id));
-  const scoredCount = ranked.filter((r) => r.r1_judges > 0).length;
+  const scoredCount = ranked.filter((r) => r.score != null).length;
   const cutAfter = showScores && scoredCount > finalists ? finalists : -1;
 
   return (
     <BoardShell
       title={CATEGORY_LABEL[category]}
-      subtitle={showScores ? `Top ${finalists} go to the final` : "Scores revealed later"}
+      subtitle={
+        showScores
+          ? `Top ${finalists} go to the final · Judges ${judgeWeight}% + Audience ${100 - judgeWeight}%`
+          : "Scores revealed later"
+      }
       compact={compact}
       grow={Math.ceil(ranked.length / 5)}
     >
@@ -203,9 +223,10 @@ export function Round1Board({
                   <Round1Row
                     r={r}
                     judgeCount={judgeCount}
+                    judgeWeight={judgeWeight}
                     showScores={showScores}
                     onStage={r.contestant_id === nowPerforming}
-                    displayRank={showScores ? (r.r1_judges > 0 ? r.rank : null) : (r.performance_order ?? null)}
+                    displayRank={showScores ? (r.score != null ? r.rank : null) : (r.performance_order ?? null)}
                   />
                 </div>
                 {i === cutAfter - 1 && (

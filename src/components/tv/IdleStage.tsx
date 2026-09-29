@@ -23,8 +23,9 @@ export function LogoOrb({ size, minimal = false }: { size: string; minimal?: boo
               key={i}
               className="absolute -translate-x-1/2 -translate-y-1/2 font-bold"
               style={{
-                left: `${50 + 50 * Math.cos(a)}%`,
-                top: `${50 + 50 * Math.sin(a)}%`,
+                // Rounded so server and browser render the same value.
+                left: `${(50 + 50 * Math.cos(a)).toFixed(2)}%`,
+                top: `${(50 + 50 * Math.sin(a)).toFixed(2)}%`,
                 fontSize: `calc(${size} * 0.13)`,
                 color: ["#f472a0", "#f2c46d", "#ffffff", "#e0356f", "#f2c46d", "#f472a0"][i],
                 textShadow: "0 0 12px rgb(224 53 111 / 0.8)",
@@ -174,10 +175,13 @@ export function IdleStage({
   eyebrow,
   nextUp,
   progress,
+  vote,
 }: {
   eyebrow: string;
   nextUp: NextUp;
   progress: { done: number; total: number } | null;
+  /** Voting QR shown at the right while audience voting is open. */
+  vote?: React.ReactNode;
 }) {
   return (
     <section className="pop-in relative isolate flex shrink-0 items-center overflow-hidden rounded-3xl border border-accent/40 bg-[radial-gradient(ellipse_at_20%_50%,rgb(224_53_111/0.35),transparent_60%),radial-gradient(ellipse_at_90%_0%,rgb(242_196_109/0.15),transparent_50%)] bg-panel/60">
@@ -185,9 +189,9 @@ export function IdleStage({
       <SoundWaves />
       <NoteStream />
       <Sparkles />
-      <div className="relative z-10 flex w-full items-center gap-[3rem] px-[2.5rem] py-[1.2rem]">
+      <div className="relative z-10 flex w-full flex-wrap items-center gap-x-[3rem] gap-y-[1rem] px-[2.5rem] py-[1.2rem] lg:flex-nowrap">
         <LogoOrb size="clamp(8rem, 21dvh, 14rem)" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[16rem]">
           <div className="text-[1rem] font-bold tracking-[0.4em] text-accent-2 uppercase">{eyebrow}</div>
           <div className="mt-[0.2rem] flex flex-wrap items-baseline gap-x-[1rem] leading-none">
             <span className="shine-text text-[3.3rem] font-extrabold tracking-tight uppercase">Karaoke</span>
@@ -226,6 +230,7 @@ export function IdleStage({
             )}
           </div>
         </div>
+        {vote}
       </div>
     </section>
   );

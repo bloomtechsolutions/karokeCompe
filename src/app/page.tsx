@@ -14,7 +14,7 @@ export default async function DashboardPage() {
     supabase.rpc("judge_count"),
     supabase.rpc("vote_total"),
   ]);
-  const votingLive = settings.stage === "final" && settings.voting_open;
+  const votingLive = (settings.stage === "round1" || settings.stage === "final") && settings.voting_open;
 
   return (
     <>

@@ -11,7 +11,13 @@ export const CRITERIA = [
 
 export type CriterionKey = (typeof CRITERIA)[number]["key"];
 
-export type Round1Result = LeaderboardRow & { rank: number };
+export type Round1Result = LeaderboardRow & {
+  rank: number;
+  judgePoints: number | null;
+  audiencePoints: number | null;
+  /** Judges' points plus audience points, out of 100. */
+  score: number | null;
+};
 
 export type FinalResult = LeaderboardRow & {
   rank: number;
@@ -41,42 +47,57 @@ function rankBy<T extends LeaderboardRow>(
   });
 }
 
-/** 1st round: average judge total out of 100. Tie-break: vocal quality. */
-export function rankRound1(rows: LeaderboardRow[], category: Category): Round1Result[] {
+/**
+ * Judges' average (out of 100) scaled to `judgeWeight` points, plus audience
+ * votes scaled to the remaining points. The performer with the most votes in
+ * the category gets the full audience points; others are proportional to
+ * that leader.
+ */
+function weigh(
+  avg: number | null,
+  judged: boolean,
+  votes: number | null,
+  maxVotes: number,
+  votesKnown: boolean,
+  judgeWeight: number,
+) {
+  const judgePoints = judged && avg != null ? round2((Number(avg) / 100) * judgeWeight) : null;
+  const audiencePoints = votesKnown
+    ? round2(maxVotes > 0 ? ((votes ?? 0) / maxVotes) * (100 - judgeWeight) : 0)
+    : null;
+  const total = judgePoints == null ? null : round2(judgePoints + (audiencePoints ?? 0));
+  return { judgePoints, audiencePoints, total };
+}
+
+/** 1st round: judges × judgeWeight% + audience votes. Tie-break: vocal quality. */
+export function rankRound1(rows: LeaderboardRow[], category: Category, judgeWeight = 70): Round1Result[] {
+  const inCategory = rows.filter((r) => r.category === category);
+  const votesKnown = inCategory.every((r) => r.r1_votes != null);
+  const maxVotes = Math.max(0, ...inCategory.map((r) => r.r1_votes ?? 0));
+  const withScores = inCategory.map((r) => {
+    const w = weigh(r.r1_avg, r.r1_judges > 0, r.r1_votes, maxVotes, votesKnown, judgeWeight);
+    return { ...r, judgePoints: w.judgePoints, audiencePoints: w.audiencePoints, score: w.total };
+  });
   return rankBy(
-    rows.filter((r) => r.category === category),
-    (r) => (r.r1_judges > 0 ? Number(r.r1_avg) : null),
+    withScores,
+    (r) => r.score,
     (r) => (r.r1_vocal_avg == null ? null : Number(r.r1_vocal_avg)),
   );
 }
 
-/**
- * Final round: judges' average (out of 100) scaled to `judgeWeight` points,
- * plus audience votes scaled to the remaining points. The finalist with the
- * most votes in the category gets the full audience points; others are
- * proportional to that leader.
- */
+/** Final round: finalists only, same judges/audience split. */
 export function rankFinal(
   rows: LeaderboardRow[],
   category: Category,
   judgeWeight = 70,
 ): FinalResult[] {
-  const audienceWeight = 100 - judgeWeight;
   const finalists = rows.filter((r) => r.category === category && r.is_finalist);
   const votesKnown = finalists.every((r) => r.votes != null);
   const maxVotes = Math.max(0, ...finalists.map((r) => r.votes ?? 0));
 
   const withScores = finalists.map((r) => {
-    const judgePoints =
-      r.final_judges > 0 && r.final_avg != null
-        ? round2((Number(r.final_avg) / 100) * judgeWeight)
-        : null;
-    const audiencePoints = votesKnown
-      ? round2(maxVotes > 0 ? ((r.votes ?? 0) / maxVotes) * audienceWeight : 0)
-      : null;
-    const finalScore =
-      judgePoints == null ? null : round2(judgePoints + (audiencePoints ?? 0));
-    return { ...r, judgePoints, audiencePoints, finalScore };
+    const w = weigh(r.final_avg, r.final_judges > 0, r.votes, maxVotes, votesKnown, judgeWeight);
+    return { ...r, judgePoints: w.judgePoints, audiencePoints: w.audiencePoints, finalScore: w.total };
   });
 
   return rankBy(

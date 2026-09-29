@@ -67,7 +67,12 @@ export type LeaderboardRow = {
   final_avg: number | null;
   final_vocal_avg: number | null;
   final_judges: number;
+  /** Final round audience votes (null when hidden). */
   votes: number | null;
+  /** 1st round audience votes (null when hidden). */
+  r1_votes: number | null;
+  /** Called to the stage (or scored) in the 1st round, so on the round 1 ballot. */
+  r1_started: boolean;
 };
 
 export const CATEGORIES: Category[] = ["solo", "duet"];

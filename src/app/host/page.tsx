@@ -7,7 +7,7 @@ import { getLeaderboard, getSettings } from "@/lib/data";
 import { fmt, rankFinal, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types";
-import { categoryVoting, nextInLine } from "@/lib/voting";
+import { nextInLine, round1Candidates, stageVoting } from "@/lib/voting";
 import { logout } from "../login/actions";
 import { callToStage, clearStage } from "./actions";
 
@@ -108,8 +108,9 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
             </Script>
             <Script label="How it works">
               Our judges score every performance out of 100: vocal quality, rhythm and timing, stage presence, song
-              interpretation and overall performance. The best {settings.finalists_per_category} in each category go
-              through to the final, where <strong>your vote</strong> counts for {100 - judgeWeight}% of the score.
+              interpretation and overall performance, and <strong>your vote</strong> counts for{" "}
+              {100 - judgeWeight}% of the score in both rounds. Scan the QR code on the screen once the performances
+              start. The best {settings.finalists_per_category} in each category go through to the final.
             </Script>
             <p className="text-sm text-muted">
               The first performer appears here as soon as the organiser starts the 1st round.
@@ -213,8 +214,10 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
             {CATEGORIES.map((c) => {
               const marked = rows.filter((r) => r.category === c && r.is_finalist);
               const top = marked.length
-                ? rankRound1(marked, c)
-                : rankRound1(rows, c).filter((r) => r.rank <= settings.finalists_per_category && r.r1_judges > 0);
+                ? marked
+                : rankRound1(rows, c, judgeWeight).filter(
+                    (r) => r.rank <= settings.finalists_per_category && r.r1_judges > 0,
+                  );
               if (top.length === 0) return null;
               return (
                 <div key={c} className="space-y-2">
@@ -224,7 +227,8 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
                   </Script>
                   {!marked.length && (
                     <p className="text-xs text-amber-300">
-                      Based on current scores. The organiser still needs to confirm the finalists.
+                      Based on current judges&apos; scores and votes. The organiser still needs to close voting and
+                      confirm the finalists.
                     </p>
                   )}
                 </div>
@@ -232,18 +236,29 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
             })}
             <Script label="Break">
               We&apos;ll take a short break while our finalists get ready. Don&apos;t go anywhere: in the final,{" "}
-              <strong>you</strong> get to vote!
+              <strong>you</strong> get to vote again!
             </Script>
           </Section>
         )}
 
-        {/* ---------------- Final: voting ---------------- */}
-        {isFinal && (
+        {/* ---------------- Audience voting (both rounds) ---------------- */}
+        {live && (
           <Section title={`Audience voting · ${voteTotal} votes`}>
             {CATEGORIES.map((c) => {
-              const v = categoryVoting(rows, c, settings.now_performing);
+              const v = stageVoting(stage, rows, c, settings.now_performing);
               if (v.total === 0) return null;
-              const finalists = rankFinal(rows, c, judgeWeight);
+              const tally = isFinal
+                ? rankFinal(rows, c, judgeWeight).map((r) => ({ id: r.contestant_id, name: r.name, votes: r.votes }))
+                : round1Candidates(rows, c, settings.now_performing)
+                    .map((r) => ({ id: r.contestant_id, name: r.name, votes: r.r1_votes }))
+                    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0));
+              const status = !settings.voting_open
+                ? "Closed"
+                : v.ready
+                  ? "Voting open"
+                  : isFinal
+                    ? `Opens after all perform · ${v.performed}/${v.total}`
+                    : "Opens with the first performer";
               return (
                 <div key={c} className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -251,24 +266,35 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
                     <span
                       className={`text-sm font-semibold ${!settings.voting_open ? "text-muted" : v.ready ? "text-emerald-300" : "text-amber-300"}`}
                     >
-                      {!settings.voting_open ? "Closed" : v.ready ? "Voting open" : `Opens after all perform · ${v.performed}/${v.total}`}
+                      {status}
                     </span>
                   </div>
                   {settings.voting_open && v.ready && (
                     <Script label="Voting open">
-                      {CATEGORY_LABEL[c]} voting is now open! Scan the QR code on the screen, enter your staff ID and pick
-                      your favourite. One vote per person in each category, and your vote counts for{" "}
-                      {100 - judgeWeight}%!
+                      {isFinal ? (
+                        <>
+                          {CATEGORY_LABEL[c]} voting is now open! Scan the QR code on the screen, enter your staff ID and
+                          pick your favourite finalist.
+                        </>
+                      ) : (
+                        <>
+                          {CATEGORY_LABEL[c]} voting is open! Scan the QR code on the screen and enter your staff ID.
+                          Singers join the list as they perform, so you can vote now or wait for your favourite.
+                        </>
+                      )}{" "}
+                      One vote per person in each category, and your vote counts for {100 - judgeWeight}%!
                     </Script>
                   )}
-                  <ul className="divide-y divide-line/60 rounded-xl bg-bg/40 px-4">
-                    {finalists.map((r) => (
-                      <li key={r.contestant_id} className="flex items-center justify-between gap-3 py-2">
-                        <span className="min-w-0 truncate">{r.name}</span>
-                        <span className="shrink-0 text-sm text-gold tabular-nums">🗳 {r.votes ?? 0}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {tally.length > 0 && (
+                    <ul className="divide-y divide-line/60 rounded-xl bg-bg/40 px-4">
+                      {tally.map((r) => (
+                        <li key={r.id} className="flex items-center justify-between gap-3 py-2">
+                          <span className="min-w-0 truncate">{r.name}</span>
+                          <span className="shrink-0 text-sm text-gold tabular-nums">🗳 {r.votes ?? 0}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}

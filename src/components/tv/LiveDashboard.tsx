@@ -6,7 +6,7 @@ import { rankFinal, rankRound1 } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
-import { activeFinalCategories, categoryVoting, nextInLine } from "@/lib/voting";
+import { activeFinalCategories, nextInLine, stageVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
 import { IdleHero, IdleStage, LogoOrb, type NextUp } from "./IdleStage";
 import { TvChrome } from "./TvChrome";
@@ -30,9 +30,11 @@ export function LiveDashboard(props: DashboardProps) {
   const { stage, rows, showScores, nowPerforming } = props;
   const live = stage === "round1" || stage === "final";
   const onStage = live ? (rows.find((r) => r.contestant_id === nowPerforming) ?? null) : null;
-  const openCategories = CATEGORIES.filter((c) => categoryVoting(rows, c, nowPerforming).ready);
-  const showVote = stage === "final" && props.votingOpen && props.vote != null && openCategories.length > 0;
-  const hasSide = onStage != null || showVote;
+  const openCategories = CATEGORIES.filter((c) => stageVoting(stage, rows, c, nowPerforming).ready);
+  const showVote = live && props.votingOpen && props.vote != null && openCategories.length > 0;
+  // Between round 1 acts the QR sits inside the logo banner, so the boards keep the full width.
+  const voteInBanner = showVote && stage === "round1" && !onStage;
+  const hasSide = onStage != null || (showVote && !voteInBanner);
   // The logo show replaces the header (it already names the event and stage).
   const idle = stage === "setup" || (live && !hasSide);
   // In the final, show only the category being performed or voted on.
@@ -73,12 +75,23 @@ export function LiveDashboard(props: DashboardProps) {
             {hasSide && (
               <div className="flex min-h-0 flex-col gap-[1.2rem]">
                 {onStage && <Spotlight row={onStage} {...props} tight={showVote} />}
-                {showVote && <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />}
+                {showVote && !voteInBanner && (
+                  <VotePanel {...props} compact={onStage != null} openCategories={openCategories} />
+                )}
               </div>
             )}
             <div className="flex min-h-0 flex-col gap-[1.2rem]">
               {!hasSide && (
-                <IdleStage eyebrow={`${STAGE_LABEL[stage]} · Live`} nextUp={nextUp} progress={progress} />
+                <IdleStage
+                  eyebrow={`${STAGE_LABEL[stage]} · Live`}
+                  nextUp={nextUp}
+                  progress={progress}
+                  vote={
+                    voteInBanner && props.vote ? (
+                      <BannerVote svg={props.vote.svg} voteTotal={props.voteTotal} openCategories={openCategories} />
+                    ) : undefined
+                  }
+                />
               )}
               {boardCategories.map((c) =>
                 stage === "round1" ? (
@@ -90,6 +103,7 @@ export function LiveDashboard(props: DashboardProps) {
                     showScores={showScores}
                     finalists={props.finalistsPerCategory}
                     nowPerforming={nowPerforming}
+                    judgeWeight={props.judgeWeight}
                     compact={onStage != null}
                   />
                 ) : (
@@ -154,7 +168,7 @@ function TopBar({ stage, votingOpen, voteTotal }: DashboardProps) {
   return (
     <header className="relative z-10 flex flex-wrap items-center justify-end gap-x-4 gap-y-2 px-[1.5rem] py-[0.8rem]">
       <div className="flex flex-wrap items-center gap-[0.8rem]">
-        {stage === "final" && votingOpen && voteTotal > 0 && (
+        {live && votingOpen && voteTotal > 0 && (
           <span
             className={`hidden items-center gap-2 rounded-full border border-gold/50 bg-gold/10 px-[1rem] py-[0.4rem] text-[1rem] font-semibold text-gold transition-transform sm:inline-flex ${
               votePulse ? "scale-110" : ""
@@ -238,6 +252,7 @@ function Spotlight({
 }
 
 function VotePanel({
+  stage,
   vote,
   voteTotal,
   judgeWeight,
@@ -261,7 +276,7 @@ function VotePanel({
       <div className={compact ? "min-w-0 flex-1" : ""}>
         <div className={`flex items-center gap-[1rem] ${compact ? "" : "justify-center"}`}>
           <LogoOrb size={compact ? "3.6rem" : "6rem"} minimal />
-          <div className={`leading-tight font-extrabold whitespace-nowrap ${compact ? "text-[1.7rem]" : "text-[3.2rem]"}`}>
+          <div className={`leading-tight font-extrabold lg:whitespace-nowrap ${compact ? "text-[1.7rem]" : "text-[3.2rem]"}`}>
             Scan to vote!
           </div>
         </div>
@@ -270,7 +285,7 @@ function VotePanel({
         </div>
         {!compact && (
           <div className="mt-[0.3rem] text-[1.15rem] text-muted">
-            Your vote counts for {100 - judgeWeight}% of the final score
+            Your vote counts for {100 - judgeWeight}% of the {stage === "final" ? "final" : "1st round"} score
           </div>
         )}
         <div
@@ -286,14 +301,41 @@ function VotePanel({
   );
 }
 
+/** Voting QR and live count, sized to sit at the right of the logo banner. */
+function BannerVote({ svg, voteTotal, openCategories }: { svg: string; voteTotal: number; openCategories: Category[] }) {
+  const pulse = useFlash(voteTotal, 1200);
+  return (
+    <div className="flex max-w-full shrink-0 flex-wrap items-center gap-[1.2rem] rounded-2xl border-2 border-gold/60 bg-bg/70 p-[0.8rem] backdrop-blur lg:flex-nowrap">
+      <div
+        className="w-[clamp(8rem,22dvh,13rem)] shrink-0 rounded-xl bg-white p-[0.4rem]"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <div className="text-left">
+        <div className="text-[2rem] leading-tight font-extrabold whitespace-nowrap">Scan to vote!</div>
+        <div className="text-[1.05rem] font-semibold text-gold">
+          {openCategories.map((c) => CATEGORY_LABEL[c]).join(" & ")} voting open
+        </div>
+        <div
+          className={`mt-[0.4rem] text-[2.6rem] leading-none font-extrabold text-gold tabular-nums transition-transform ${
+            pulse ? "scale-110" : ""
+          }`}
+        >
+          <AnimatedNumber value={voteTotal} decimals={0} />
+          <span className="ml-2 text-[1rem] font-semibold text-muted">votes</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Flashes a banner when a category gets a new leader. */
 function LeaderBanner({ stage, rows, judgeWeight }: { stage: Stage; rows: LeaderboardRow[]; judgeWeight: number }) {
   const leaders: Record<Category, string | null> = { solo: null, duet: null };
   const names = new Map(rows.map((r) => [r.contestant_id, r.name]));
   for (const c of CATEGORIES) {
     if (stage === "round1") {
-      const top = rankRound1(rows, c)[0];
-      leaders[c] = top && top.r1_judges > 0 ? top.contestant_id : null;
+      const top = rankRound1(rows, c, judgeWeight)[0];
+      leaders[c] = top && top.score != null ? top.contestant_id : null;
     } else {
       const top = rankFinal(rows, c, judgeWeight)[0];
       leaders[c] = top && top.finalScore != null ? top.contestant_id : null;

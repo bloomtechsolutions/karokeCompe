@@ -9,8 +9,8 @@ export type VoteState = { ok?: boolean; error?: string };
 
 const MESSAGES: Record<string, string> = {
   closed: "Voting is closed.",
-  invalid: "Please choose a finalist.",
-  not_ready: "Voting for this category opens after all its finalists have performed.",
+  invalid: "Please choose a performer.",
+  not_ready: "Voting for this performer is not open yet.",
   voter_id_required: "Please enter your staff ID to vote.",
   already_voted: "You have already voted in this category from this device.",
   voter_id_used: "This staff ID has already voted in this category.",

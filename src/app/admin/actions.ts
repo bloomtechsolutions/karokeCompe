@@ -53,11 +53,12 @@ export async function setStage(formData: FormData) {
   if (!STAGES.includes(stage)) fail("Invalid stage.");
   const before = await getSettings();
   const supabase = await createClient();
-  // Entering the final arms audience voting; each category then opens by
-  // itself once all its finalists have performed.
+  // Starting a round arms audience voting. In round 1 each category opens as
+  // soon as its first performer is on stage; in the final, once all its
+  // finalists have performed. It stays open until the organiser closes it.
   const patch: { stage: Stage; voting_open: boolean; now_performing: null } = {
     stage,
-    voting_open: stage === "final",
+    voting_open: stage === "round1" || stage === "final",
     now_performing: null,
   };
   const { error } = await supabase.from("settings").update(patch).eq("id", 1);
@@ -70,7 +71,8 @@ export async function setVoting(formData: FormData) {
   await requireAdmin();
   const open = str(formData, "open") === "true";
   const settings = await getSettings();
-  if (open && settings.stage !== "final") fail("Move to the Final Round before opening voting.");
+  if (open && settings.stage !== "round1" && settings.stage !== "final")
+    fail("Start the 1st Round or Final Round before opening voting.");
   const supabase = await createClient();
   const { error } = await supabase.from("settings").update({ voting_open: open }).eq("id", 1);
   if (error) fail(error.message);
@@ -207,7 +209,9 @@ export async function advanceTop(formData: FormData) {
   const category = str(formData, "category") as Category;
   if (!CATEGORIES.includes(category)) fail("Invalid category.", "results");
   const settings = await getSettings();
-  const ranked = rankRound1(await getLeaderboard(), category).filter((r) => r.r1_judges > 0);
+  const ranked = rankRound1(await getLeaderboard(), category, Number(settings.judge_weight)).filter(
+    (r) => r.r1_judges > 0,
+  );
   // Ties at the cut-off are all included.
   const top = ranked.filter((r) => r.rank <= settings.finalists_per_category);
   if (top.length === 0) fail("No round 1 scores yet in this category.", "results");
@@ -295,6 +299,11 @@ export async function clearData(formData: FormData) {
   if (what === "scores" || what === "all") {
     const { error } = await admin.from("scores").delete().not("id", "is", null);
     if (error) fail(error.message, "settings");
+    // Nobody has performed any more: reset the round 1 ballot and running order.
+    const called = await admin.from("contestants").update({ r1_called_at: null }).not("id", "is", null);
+    if (called.error) fail(called.error.message, "settings");
+    const stage = await admin.from("settings").update({ now_performing: null, last_on_stage: null }).eq("id", 1);
+    if (stage.error) fail(stage.error.message, "settings");
   }
   await audit("clear_data", "competition", null, { what });
   done(`Cleared ${what === "all" ? "scores and votes" : what}.`, "settings");

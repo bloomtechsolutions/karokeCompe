@@ -5,7 +5,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 | Page | Who | Login |
 | --- | --- | --- |
 | `/` Dashboard | Everyone, built for a TV: live leaderboards, "now on stage" spotlight, voting QR, winners podium | No |
-| `/vote` Audience vote | Audience during the final | No (staff ID; one vote per staff ID and IP per category) |
+| `/vote` Audience vote | Audience during both rounds | No (staff ID; one vote per staff ID and IP per category, per round) |
 | `/judge` Scoring | Judges | Yes |
 | `/host` Host (MC) cue cards | Host: who's on stage, who's next, what to say, call the next act | Yes (Host account, or organiser) |
 | `/admin` Organiser panel | Organiser | Yes |
@@ -24,8 +24,8 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
    | Overall Performance – entertainment value and impact | 15 |
    | **Total** | **100** |
 
-   A performer's round score is the average of the judges' totals. Ties are broken by average vocal quality.
-3. **Finalists** – on *Results*, click **Advance top 3** for each category (the count can be changed in Settings; a tie at the cut-off includes everyone tied). Finalists can also be added/removed by hand.
+   **1st round score = judges' average × 70% + audience points (30)**, the same formula as the final. Audience voting opens in each category as soon as its first performer is called to the stage. Performers join the ballot as they go on. Voting stays open until the organiser closes it in *Live control*. Each person gets one vote per category in this round. Ties are broken by average vocal quality.
+3. **Finalists** – close 1st round voting, then on *Results* click **Advance top 3** for each category (the count can be changed in Settings; a tie at the cut-off includes everyone tied). Finalists can also be added/removed by hand.
 4. **Final Round** – set the stage to *Final Round* (this locks 1st round scores) and enter each finalist's final song, which must be different from their 1st round song. Judges score finalists with the same sheet; open **audience voting** and show the QR code from *Live control*.
    - **Final score = judges' average × 70% + audience points (30).**
    - The finalist with the most votes in a category gets the full 30 audience points; the others get points in proportion to the leader's votes (e.g. half the leader's votes = 15 points).
@@ -37,7 +37,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 - **IP address:** each vote is logged with the voter's IP, and a second vote from the same IP in a category is blocked. Phones on the same Wi-Fi share one public IP, so turn this off in Settings if the audience votes over the venue Wi-Fi.
 - **Device:** a second vote from the same browser is also blocked.
 - **Logging:** every vote and every blocked attempt is listed in *Admin → Votes*.
-- **When voting opens:** moving to the Final Round arms voting. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
+- **When voting opens:** starting the 1st Round arms voting. Each category opens when its first performer is called to the stage, and closes when the organiser clicks **Close voting** or moves to the Final. The final has a separate vote. Moving to the Final Round arms voting again. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
 
 **Hide scores.** Turn off *Show scores on public dashboard* to keep results secret until the announcement. The organiser can still see everything.
 

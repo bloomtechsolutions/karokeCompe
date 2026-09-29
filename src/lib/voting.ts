@@ -1,4 +1,4 @@
-import type { Category, LeaderboardRow } from "./types";
+import type { Category, LeaderboardRow, Stage } from "./types";
 
 export type CategoryVoting = { total: number; performed: number; ready: boolean };
 
@@ -17,6 +17,39 @@ export function categoryVoting(
     (r) => r.final_judges > 0 && r.contestant_id !== nowPerforming,
   ).length;
   return { total: finalists.length, performed, ready: finalists.length > 0 && performed === finalists.length };
+}
+
+/** 1st round ballot for a category: performers who have started, in running order. */
+export function round1Candidates(rows: LeaderboardRow[], category: Category, nowPerforming: string | null) {
+  return rows
+    .filter((r) => r.category === category && (r.r1_started || r.contestant_id === nowPerforming))
+    .sort((a, b) => (a.performance_order ?? 999) - (b.performance_order ?? 999) || a.name.localeCompare(b.name));
+}
+
+/**
+ * 1st round: a category's voting opens as soon as its first performer is
+ * called to the stage. Mirrors public.cast_vote() in the database.
+ */
+export function round1Voting(
+  rows: LeaderboardRow[],
+  category: Category,
+  nowPerforming: string | null,
+): CategoryVoting {
+  const total = rows.filter((r) => r.category === category).length;
+  const performed = round1Candidates(rows, category, nowPerforming).length;
+  return { total, performed, ready: performed > 0 };
+}
+
+/** Voting status for a category in the current round. */
+export function stageVoting(
+  stage: Stage,
+  rows: LeaderboardRow[],
+  category: Category,
+  nowPerforming: string | null,
+): CategoryVoting {
+  if (stage === "round1") return round1Voting(rows, category, nowPerforming);
+  if (stage === "final") return categoryVoting(rows, category, nowPerforming);
+  return { total: 0, performed: 0, ready: false };
 }
 
 /**

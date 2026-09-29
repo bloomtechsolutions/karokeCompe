@@ -13,12 +13,22 @@ export type BoothCategory = {
   votedFor: string | null;
   ready: boolean;
   performed: number;
+  total: number;
 };
 
 const STAFF_KEY = "karaoke-staff-id";
 
 /** Voting for all categories, sharing one staff ID field. */
-export function VoteBooth({ categories, requireVoterId }: { categories: BoothCategory[]; requireVoterId: boolean }) {
+export function VoteBooth({
+  categories,
+  requireVoterId,
+  round,
+}: {
+  categories: BoothCategory[];
+  requireVoterId: boolean;
+  round: "round1" | "final";
+}) {
+  const who = round === "final" ? "finalist" : "performer";
   const [staffId, setStaffId] = useState("");
 
   useEffect(() => {
@@ -57,18 +67,30 @@ export function VoteBooth({ categories, requireVoterId }: { categories: BoothCat
           <h2 className="mb-3 text-lg font-bold">{CATEGORY_LABEL[c.category]}</h2>
           {c.votedFor ? (
             <p className="rounded-lg bg-emerald-900/40 p-4 text-center text-emerald-200">
-              You voted for <strong>{c.finalists.find((f) => f.id === c.votedFor)?.name ?? "a finalist"}</strong>. Thank
+              You voted for <strong>{c.finalists.find((f) => f.id === c.votedFor)?.name ?? `a ${who}`}</strong>. Thank
               you!
             </p>
           ) : !c.ready ? (
             <div className="rounded-lg bg-bg/50 p-4 text-center">
-              <div className="font-semibold">Voting opens after all finalists have performed</div>
+              <div className="font-semibold">
+                {round === "final"
+                  ? "Voting opens after all finalists have performed"
+                  : "Voting opens when the first performer takes the stage"}
+              </div>
               <div className="mt-1 text-sm text-muted tabular-nums">
-                {c.performed} of {c.finalists.length} performed
+                {c.performed} of {c.total} performed
               </div>
             </div>
           ) : (
-            <VoteForm category={c.category} finalists={c.finalists} staffId={requireVoterId ? staffId : ""} />
+            <>
+              {round === "round1" && c.performed < c.total && (
+                <p className="mb-3 text-xs text-muted">
+                  {c.performed} of {c.total} have performed so far. Others appear here as they take the stage. You have
+                  one vote in this category, so you can wait for your favourite.
+                </p>
+              )}
+              <VoteForm category={c.category} finalists={c.finalists} who={who} staffId={requireVoterId ? staffId : ""} />
+            </>
           )}
         </section>
       ))}
@@ -76,7 +98,17 @@ export function VoteBooth({ categories, requireVoterId }: { categories: BoothCat
   );
 }
 
-function VoteForm({ category, finalists, staffId }: { category: Category; finalists: Finalist[]; staffId: string }) {
+function VoteForm({
+  category,
+  finalists,
+  who,
+  staffId,
+}: {
+  category: Category;
+  finalists: Finalist[];
+  who: string;
+  staffId: string;
+}) {
   const [state, action] = useActionState<VoteState, FormData>(castVote, {});
   const [choice, setChoice] = useState<string>("");
 
@@ -92,7 +124,7 @@ function VoteForm({ category, finalists, staffId }: { category: Category; finali
     <form action={action} className="space-y-3">
       <input type="hidden" name="voter_ref" value={staffId} />
       <fieldset className="space-y-2">
-        <legend className="sr-only">Choose your favourite {CATEGORY_LABEL[category]} finalist</legend>
+        <legend className="sr-only">Choose your favourite {CATEGORY_LABEL[category]} {who}</legend>
         {finalists.map((f) => (
           <label
             key={f.id}
