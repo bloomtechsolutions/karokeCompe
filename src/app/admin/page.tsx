@@ -731,6 +731,12 @@ const VOTE_RESULT_LABEL: Record<string, string> = {
   already_voted: "Same device",
   voter_id_used: "Staff ID already voted",
   ip_used: "IP already voted",
+  change_closed: "Change: voting closed",
+  change_invalid: "Change: invalid",
+  change_not_ready: "Change: not on the ballot yet",
+  change_no_vote: "Change: no vote from this device",
+  change_same: "Change: same choice",
+  change_change_used: "Change: already changed once",
 };
 
 async function VotesTab({ contestants }: { contestants: Contestant[] }) {
@@ -738,7 +744,7 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
   const [votesRes, attemptsRes] = await Promise.all([
     supabase
       .from("audience_votes")
-      .select("id, contestant_id, category, round, voter_ref, voter_ip, created_at")
+      .select("id, contestant_id, category, round, voter_ref, voter_ip, created_at, previous_contestant_id, changed_at")
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
@@ -756,6 +762,8 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
     voter_ip: string | null;
     created_at: string;
     result?: string;
+    previous_contestant_id?: string | null;
+    changed_at?: string | null;
   };
   const votes = (votesRes.data ?? []) as VoteRow[];
   const attempts = (attemptsRes.data ?? []) as VoteRow[];
@@ -787,7 +795,15 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
                 {v.round === "round1" ? "1st Round" : v.round === "final" ? "Final" : "—"}
               </td>
               <td className="py-2 pr-3">{v.category ? CATEGORY_LABEL[v.category as "solo" | "duet"] : "—"}</td>
-              <td className="py-2 pr-3">{(v.contestant_id && names.get(v.contestant_id)) ?? "—"}</td>
+              <td className="py-2 pr-3">
+                {(v.contestant_id && names.get(v.contestant_id)) ?? "—"}
+                {v.changed_at && (
+                  <span className="block text-xs text-amber-300">
+                    Changed from {(v.previous_contestant_id && names.get(v.previous_contestant_id)) ?? "—"} at{" "}
+                    {time(v.changed_at)}
+                  </span>
+                )}
+              </td>
               {blocked && (
                 <td className="py-2 text-amber-300">{VOTE_RESULT_LABEL[v.result ?? ""] ?? v.result}</td>
               )}

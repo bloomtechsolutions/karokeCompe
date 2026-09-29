@@ -282,7 +282,8 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
                           Singers join the list as they perform, so you can vote now or wait for your favourite.
                         </>
                       )}{" "}
-                      One vote per person in each category, and your vote counts for {100 - judgeWeight}%!
+                      One vote per person in each category (you can change it once), and your vote counts for{" "}
+                      {100 - judgeWeight}%!
                     </Script>
                   )}
                   {tally.length > 0 && (

@@ -36,6 +36,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 - **Staff ID:** voters enter their staff ID, and each staff ID can vote once per category.
 - **IP address:** each vote is logged with the voter's IP, and a second vote from the same IP in a category is blocked. Phones on the same Wi-Fi share one public IP, so turn this off in Settings if the audience votes over the venue Wi-Fi.
 - **Device:** a second vote from the same browser is also blocked.
+- **Changing a vote:** voters can change their vote **once** per category per round, from the same phone, while voting is still open. The change and the original choice both appear in *Admin → Votes*.
 - **Logging:** every vote and every blocked attempt is listed in *Admin → Votes*.
 - **When voting opens:** starting the 1st Round arms voting. Each category opens when its first performer is called to the stage, and closes when the organiser clicks **Close voting** or moves to the Final. The final has a separate vote. Moving to the Final Round arms voting again. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
 

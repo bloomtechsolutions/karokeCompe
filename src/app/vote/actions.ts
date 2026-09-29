@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ensureVoterToken } from "@/lib/voter";
+import { ensureVoterToken, readVoterToken } from "@/lib/voter";
 
 export type VoteState = { ok?: boolean; error?: string };
 
@@ -42,6 +42,35 @@ export async function castVote(_prev: VoteState, formData: FormData): Promise<Vo
   });
   if (error) return { error: "Could not record your vote. Please try again." };
   if (data !== "ok") return { error: MESSAGES[String(data)] ?? "Could not record your vote." };
+
+  revalidatePath("/vote");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const CHANGE_MESSAGES: Record<string, string> = {
+  closed: "Voting is closed, so votes can no longer be changed.",
+  invalid: "Please choose a performer.",
+  not_ready: "Voting for this performer is not open yet.",
+  no_vote: "We couldn't find your vote from this device. Votes can only be changed on the phone you voted with.",
+  same: "That's already your vote. Pick someone else to change it.",
+  change_used: "You have already changed your vote once in this category.",
+};
+
+/** Change an existing vote (once per category per round, same device only). */
+export async function changeVote(_prev: VoteState, formData: FormData): Promise<VoteState> {
+  const contestantId = String(formData.get("contestant_id") ?? "");
+  if (!contestantId) return { error: CHANGE_MESSAGES.invalid };
+  const [token, ip] = await Promise.all([readVoterToken(), clientIp()]);
+  if (!token) return { error: CHANGE_MESSAGES.no_vote };
+
+  const { data, error } = await createAdminClient().rpc("change_vote", {
+    p_contestant: contestantId,
+    p_voter_token: token,
+    p_voter_ip: ip,
+  });
+  if (error) return { error: "Could not change your vote. Please try again." };
+  if (data !== "ok") return { error: CHANGE_MESSAGES[String(data)] ?? "Could not change your vote." };
 
   revalidatePath("/vote");
   revalidatePath("/");

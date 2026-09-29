@@ -19,11 +19,15 @@ export default async function VotePage() {
   if (open) {
     const rows = await getLeaderboard();
     const votedFor = new Map<string, string>();
+    const changed = new Set<string>();
     const token = await readVoterToken();
     if (token) {
       const { data: status } = await createAdminClient().rpc("voter_status", { p_voter_token: token });
-      for (const row of (status ?? []) as { round: string; category: string; contestant_id: string }[]) {
-        if (row.round === round) votedFor.set(row.category, row.contestant_id);
+      type Row = { round: string; category: string; contestant_id: string; changed: boolean };
+      for (const row of (status ?? []) as Row[]) {
+        if (row.round !== round) continue;
+        votedFor.set(row.category, row.contestant_id);
+        if (row.changed) changed.add(row.category);
       }
     }
     categories = CATEGORIES.map((category) => {
@@ -33,7 +37,13 @@ export default async function VotePage() {
           .sort((a, b) => (a.final_order ?? 999) - (b.final_order ?? 999) || a.name.localeCompare(b.name))
           .map((r) => ({ id: r.contestant_id, name: r.name, song: r.song_final }));
         const status = categoryVoting(rows, category, settings.now_performing);
-        return { category, finalists, votedFor: votedFor.get(category) ?? null, ...status };
+        return {
+          category,
+          finalists,
+          votedFor: votedFor.get(category) ?? null,
+          changed: changed.has(category),
+          ...status,
+        };
       }
       const status = round1Voting(rows, category, settings.now_performing);
       const finalists = round1Candidates(rows, category, settings.now_performing).map((r) => ({
@@ -41,7 +51,13 @@ export default async function VotePage() {
         name: r.name,
         song: r.song_round1,
       }));
-      return { category, finalists, votedFor: votedFor.get(category) ?? null, ...status };
+      return {
+        category,
+        finalists,
+        votedFor: votedFor.get(category) ?? null,
+        changed: changed.has(category),
+        ...status,
+      };
     }).filter((c) => c.total > 0);
   }
 

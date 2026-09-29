@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CATEGORY_LABEL, type Category } from "@/lib/types";
-import { castVote, type VoteState } from "./actions";
+import { castVote, changeVote, type VoteState } from "./actions";
 
 type Finalist = { id: string; name: string; song: string | null };
 
@@ -11,6 +11,8 @@ export type BoothCategory = {
   category: Category;
   finalists: Finalist[];
   votedFor: string | null;
+  /** The one allowed change has been used. */
+  changed: boolean;
   ready: boolean;
   performed: number;
   total: number;
@@ -66,10 +68,7 @@ export function VoteBooth({
         <section key={c.category} className="card">
           <h2 className="mb-3 text-lg font-bold">{CATEGORY_LABEL[c.category]}</h2>
           {c.votedFor ? (
-            <p className="rounded-lg bg-emerald-900/40 p-4 text-center text-emerald-200">
-              You voted for <strong>{c.finalists.find((f) => f.id === c.votedFor)?.name ?? `a ${who}`}</strong>. Thank
-              you!
-            </p>
+            <VotedCard key={`${c.votedFor}|${c.changed}`} c={c} who={who} />
           ) : !c.ready ? (
             <div className="rounded-lg bg-bg/50 p-4 text-center">
               <div className="font-semibold">
@@ -98,24 +97,75 @@ export function VoteBooth({
   );
 }
 
+/** Shows the current vote, with the option to change it once. */
+function VotedCard({ c, who }: { c: BoothCategory; who: string }) {
+  const [editing, setEditing] = useState(false);
+  const name = c.finalists.find((f) => f.id === c.votedFor)?.name ?? `a ${who}`;
+
+  if (editing) {
+    return (
+      <div className="space-y-3">
+        <p className="rounded-lg bg-amber-900/30 p-3 text-sm text-amber-100">
+          You can change your vote <strong>only once</strong>. After this it&apos;s final.
+        </p>
+        <VoteForm
+          mode="change"
+          category={c.category}
+          finalists={c.finalists}
+          who={who}
+          staffId=""
+          initial={c.votedFor ?? ""}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="rounded-lg bg-emerald-900/40 p-4 text-center text-emerald-200">
+        You {c.changed ? "changed your vote to" : "voted for"} <strong>{name}</strong>. Thank you!
+      </p>
+      {c.changed ? (
+        <p className="text-center text-xs text-muted">You&apos;ve used your one change, so this vote is final.</p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="w-full rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-muted hover:bg-panel-2"
+        >
+          Change my vote (1 change allowed)
+        </button>
+      )}
+    </div>
+  );
+}
+
 function VoteForm({
+  mode = "cast",
   category,
   finalists,
   who,
   staffId,
+  initial = "",
+  onCancel,
 }: {
+  mode?: "cast" | "change";
   category: Category;
   finalists: Finalist[];
   who: string;
   staffId: string;
+  initial?: string;
+  onCancel?: () => void;
 }) {
-  const [state, action] = useActionState<VoteState, FormData>(castVote, {});
-  const [choice, setChoice] = useState<string>("");
+  const [state, action] = useActionState<VoteState, FormData>(mode === "change" ? changeVote : castVote, {});
+  const [choice, setChoice] = useState<string>(initial);
+  const label = CATEGORY_LABEL[category].toLowerCase();
 
   if (state.ok) {
     return (
       <p className="rounded-lg bg-emerald-900/40 p-4 text-center text-emerald-200">
-        Thanks! Your {CATEGORY_LABEL[category].toLowerCase()} vote has been counted.
+        {mode === "change" ? `Your ${label} vote has been changed.` : `Thanks! Your ${label} vote has been counted.`}
       </p>
     );
   }
@@ -148,10 +198,23 @@ function VoteForm({
         ))}
       </fieldset>
       {state.error && <p className="text-sm text-red-300">{state.error}</p>}
-      <SubmitButton className="btn-primary w-full" disabled={!choice} pendingText="Submitting…">
-        Submit {CATEGORY_LABEL[category].toLowerCase()} vote
-      </SubmitButton>
-      <p className="text-center text-xs text-muted">Votes can&apos;t be changed.</p>
+      {mode === "change" ? (
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel} className="btn-ghost flex-1">
+            Keep my vote
+          </button>
+          <SubmitButton className="btn-primary flex-1" disabled={!choice || choice === initial} pendingText="Changing…">
+            Change vote
+          </SubmitButton>
+        </div>
+      ) : (
+        <>
+          <SubmitButton className="btn-primary w-full" disabled={!choice} pendingText="Submitting…">
+            Submit {label} vote
+          </SubmitButton>
+          <p className="text-center text-xs text-muted">You can change your vote once afterwards.</p>
+        </>
+      )}
     </form>
   );
 }
