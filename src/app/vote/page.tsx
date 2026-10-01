@@ -2,7 +2,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Header, NavLink } from "@/components/Header";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CATEGORIES } from "@/lib/types";
+import { CATEGORIES, finalistsFor } from "@/lib/types";
 import { categoryVoting, round1Candidates, round1Voting } from "@/lib/voting";
 import { readVoterToken } from "@/lib/voter";
 import { VoteBooth, type BoothCategory } from "./VoteForm";
@@ -18,7 +18,7 @@ export default async function VotePage() {
   let categories: BoothCategory[] = [];
   if (open) {
     const rows = await getLeaderboard();
-    const votedFor = new Map<string, string>();
+    const picks = new Map<string, string[]>();
     const changed = new Set<string>();
     const token = await readVoterToken();
     if (token) {
@@ -26,24 +26,19 @@ export default async function VotePage() {
       type Row = { round: string; category: string; contestant_id: string; changed: boolean };
       for (const row of (status ?? []) as Row[]) {
         if (row.round !== round) continue;
-        votedFor.set(row.category, row.contestant_id);
+        picks.set(row.category, [...(picks.get(row.category) ?? []), row.contestant_id]);
         if (row.changed) changed.add(row.category);
       }
     }
     categories = CATEGORIES.map((category) => {
+      const mine = { picks: picks.get(category) ?? [], changed: changed.has(category) };
       if (isFinal) {
         const finalists = rows
           .filter((r) => r.category === category && r.is_finalist)
           .sort((a, b) => (a.final_order ?? 999) - (b.final_order ?? 999) || a.name.localeCompare(b.name))
           .map((r) => ({ id: r.contestant_id, name: r.name, song: r.song_final }));
         const status = categoryVoting(rows, category, settings.now_performing);
-        return {
-          category,
-          finalists,
-          votedFor: votedFor.get(category) ?? null,
-          changed: changed.has(category),
-          ...status,
-        };
+        return { category, finalists, limit: 1, ...mine, ...status };
       }
       const status = round1Voting(rows, category, settings.now_performing);
       const finalists = round1Candidates(rows, category, settings.now_performing).map((r) => ({
@@ -51,13 +46,8 @@ export default async function VotePage() {
         name: r.name,
         song: r.song_round1,
       }));
-      return {
-        category,
-        finalists,
-        votedFor: votedFor.get(category) ?? null,
-        changed: changed.has(category),
-        ...status,
-      };
+      // Round 1: pick as many as go through to the final (5 solo, 3 duet).
+      return { category, finalists, limit: finalistsFor(settings, category), ...mine, ...status };
     }).filter((c) => c.total > 0);
   }
 
@@ -69,8 +59,11 @@ export default async function VotePage() {
         <div className="text-center">
           <h1 className="text-2xl font-extrabold uppercase">Audience Vote · {isFinal ? "Final" : "1st Round"}</h1>
           <p className="text-sm text-muted">
-            Pick your favourite {isFinal ? "finalist" : "performer"}. Audience votes count for{" "}
-            {100 - Number(settings.judge_weight)}% of the {isFinal ? "final" : "1st round"} score.
+            {isFinal
+              ? "Pick your favourite finalist."
+              : `Pick your top ${settings.finalists_solo} solo singers and top ${settings.finalists_duet} duets.`}{" "}
+            Audience votes count for {100 - Number(settings.judge_weight)}% of the {isFinal ? "final" : "1st round"}{" "}
+            score.
           </p>
         </div>
 
@@ -79,7 +72,11 @@ export default async function VotePage() {
             Voting is not open right now. Please check back when the performances start.
           </div>
         ) : (
-          <VoteBooth categories={categories} requireVoterId={settings.require_voter_id || settings.require_checkin} round={round} />
+          <VoteBooth
+            categories={categories}
+            requireVoterId={settings.require_voter_id || settings.require_checkin}
+            round={round}
+          />
         )}
       </main>
     </>

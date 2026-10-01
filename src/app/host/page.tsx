@@ -283,11 +283,12 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
                       ) : (
                         <>
                           {CATEGORY_LABEL[c]} voting is open! Scan the QR code on the screen and enter your staff ID.
-                          Singers join the list as they perform, so you can vote now or wait for your favourite.
+                          Pick your top {finalistsFor(settings, c)} {c === "solo" ? "solo singers" : "duets"}: they
+                          join the list as they perform, so you can vote now and add more later.
                         </>
                       )}{" "}
-                      One vote per person in each category (you can change it once), and your vote counts for{" "}
-                      {100 - judgeWeight}%!
+                      {isFinal ? "One vote per person in each category" : "Each person gets those votes once"} (you
+                      can change one vote, once), and the audience vote counts for {100 - judgeWeight}%!
                     </Script>
                   )}
                   {tally.length > 0 && (

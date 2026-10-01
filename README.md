@@ -36,11 +36,11 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 5. Close voting, then set the stage to *Completed*. Each finalist's vote count updates live on the TV (hidden if "Show scores" is off). Download a CSV of the results from *Results*.
 
 **Audience voting (no login).**
-- **Staff ID:** voters enter their staff ID, and each staff ID can vote once per category.
+- **Staff ID:** voters enter their staff ID. In the **1st round** each person picks up to **5 solo** and **3 duet** performers (the same as the number of finalists; each pick is one vote for that performer). They can add picks as performers go on stage. In the **final** it's one pick per category.
 - **Venue check-in:** only staff IDs entered on the `/checkin` page can vote. In *Admin → Judges*, create an account with the role *Check-in desk*. That person types in (or pastes) the staff IDs of people at the venue, and can see who has voted (not who they voted for). This can be turned off in Settings (*Only checked-in staff can vote*).
 - **IP address:** each vote is logged with the voter's IP, and a second vote from the same IP in a category is blocked. Phones on the same Wi-Fi share one public IP, so turn this off in Settings if the audience votes over the venue Wi-Fi.
 - **Device:** a second vote from the same browser is also blocked.
-- **Changing a vote:** voters can change their vote **once** per category per round, from the same phone, while voting is still open. The change and the original choice both appear in *Admin → Votes*.
+- **Changing a vote:** voters can swap **one** of their picks **once** per category per round, from the same phone, while voting is still open. The change and the original choice both appear in *Admin → Votes*.
 - **Logging:** every vote and every blocked attempt is listed in *Admin → Votes*.
 - **When voting opens:** starting the 1st Round arms voting. Each category opens when its first performer is called to the stage, and closes when the organiser clicks **Close voting** or moves to the Final. The final has a separate vote. Moving to the Final Round arms voting again. Each category then opens by itself once all its finalists have been scored and left the stage. **Next performer** on the last finalist clears the stage.
 
