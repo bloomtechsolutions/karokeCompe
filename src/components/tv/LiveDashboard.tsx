@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { rankFinal, rankRound1 } from "@/lib/scoring";
+import { rankFinal, rankRound1, toJudgePoints } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
@@ -193,6 +193,7 @@ function Spotlight({
   row,
   stage,
   judgeCount,
+  judgeWeight,
   showScores,
   tight,
 }: DashboardProps & { row: LeaderboardRow; tight: boolean }) {
@@ -225,7 +226,8 @@ function Spotlight({
           <div className="pop-in">
             <div className="text-[1.1rem] tracking-[0.3em] text-muted uppercase">Judges&apos; score</div>
             <div className={`text-[4.5rem] leading-none font-extrabold text-gold ${tight ? "lg:text-[5rem]" : "lg:text-[7.5rem]"}`}>
-              <AnimatedNumber value={Number(avg)} duration={1800} />
+              <AnimatedNumber value={toJudgePoints(Number(avg), judgeWeight)} duration={1800} />
+              <span className="ml-2 text-[1.6rem] font-semibold text-muted">/ {judgeWeight}</span>
             </div>
           </div>
         ) : (

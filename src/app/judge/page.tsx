@@ -90,6 +90,7 @@ export default async function JudgePage() {
                 song={songOf(current)}
                 order={orderLabel(current)}
                 existing={myScores.get(current.id) ?? null}
+                judgeWeight={Number(settings.judge_weight)}
                 onStage
               />
             ) : (
@@ -119,6 +120,7 @@ export default async function JudgePage() {
                     song={songOf(c)}
                     order={orderLabel(c)}
                     existing={null}
+                    judgeWeight={Number(settings.judge_weight)}
                     missed
                   />
                 ))}

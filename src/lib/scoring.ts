@@ -1,15 +1,23 @@
 import type { Category, LeaderboardRow } from "./types";
 
-/** Judging criteria from the official sheet (total 100). */
+/** Judging criteria: each scored 0–5, so a judge's sheet totals 25. */
 export const CRITERIA = [
-  { key: "vocal", label: "Vocal Quality", hint: "Pitch, tone and clarity", max: 30 },
-  { key: "rhythm", label: "Rhythm & Timing", hint: "Staying in sync with the music", max: 20 },
-  { key: "stage_presence", label: "Stage Presence", hint: "Confidence and audience engagement", max: 20 },
-  { key: "interpretation", label: "Song Interpretation", hint: "Emotion and expression", max: 15 },
-  { key: "overall", label: "Overall Performance", hint: "Entertainment value and impact", max: 15 },
+  { key: "vocal", label: "Vocal Quality", hint: "Pitch, tone and clarity", max: 5 },
+  { key: "rhythm", label: "Rhythm & Timing", hint: "Staying in sync with the music", max: 5 },
+  { key: "stage_presence", label: "Stage Presence", hint: "Confidence and audience engagement", max: 5 },
+  { key: "interpretation", label: "Song Interpretation", hint: "Emotion and expression", max: 5 },
+  { key: "overall", label: "Overall Performance", hint: "Entertainment value and impact", max: 5 },
 ] as const;
 
 export type CriterionKey = (typeof CRITERIA)[number]["key"];
+
+/** Highest possible total on one judge's sheet (25). */
+export const MAX_TOTAL: number = CRITERIA.reduce((s, c) => s + c.max, 0);
+
+/** A judges' sheet total (or average) converted to judges' points out of `judgeWeight` (70). */
+export function toJudgePoints(total: number, judgeWeight: number) {
+  return round2((total / MAX_TOTAL) * judgeWeight);
+}
 
 export type Round1Result = LeaderboardRow & {
   rank: number;
@@ -48,7 +56,7 @@ function rankBy<T extends LeaderboardRow>(
 }
 
 /**
- * Judges' average (out of 100) scaled to `judgeWeight` points, plus audience
+ * Judges' average (out of MAX_TOTAL) scaled to `judgeWeight` points, plus audience
  * votes scaled to the remaining points. The performer with the most votes in
  * the category gets the full audience points; others are proportional to
  * that leader.
@@ -61,7 +69,7 @@ function weigh(
   votesKnown: boolean,
   judgeWeight: number,
 ) {
-  const judgePoints = judged && avg != null ? round2((Number(avg) / 100) * judgeWeight) : null;
+  const judgePoints = judged && avg != null ? toJudgePoints(Number(avg), judgeWeight) : null;
   const audiencePoints = votesKnown
     ? round2(maxVotes > 0 ? ((votes ?? 0) / maxVotes) * (100 - judgeWeight) : 0)
     : null;

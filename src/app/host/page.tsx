@@ -4,7 +4,7 @@ import { StageBadge } from "@/components/StageBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { requireHost } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
-import { fmt, rankFinal, rankRound1 } from "@/lib/scoring";
+import { fmt, rankFinal, rankRound1, toJudgePoints } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types";
 import { nextInLine, round1Candidates, stageVoting } from "@/lib/voting";
@@ -107,9 +107,9 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
               stage.
             </Script>
             <Script label="How it works">
-              Our judges score every performance out of 100: vocal quality, rhythm and timing, stage presence, song
-              interpretation and overall performance, and <strong>your vote</strong> counts for{" "}
-              {100 - judgeWeight}% of the score in both rounds. Scan the QR code on the screen once the performances
+              Our judges score every performance from 0 to 5 on vocal quality, rhythm and timing, stage presence, song
+              interpretation and overall performance. That&apos;s worth {judgeWeight} points, and{" "}
+              <strong>your vote</strong> is worth the other {100 - judgeWeight} points in both rounds. Scan the QR code on the screen once the performances
               start. The best {settings.finalists_per_category} in each category go through to the final.
             </Script>
             <p className="text-sm text-muted">
@@ -145,7 +145,11 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
                 </Script>
                 {judgedCount(current) >= judgeCount && (isFinal ? current.final_avg : current.r1_avg) != null && (
                   <p className="text-sm text-muted">
-                    Judges&apos; average: <strong className="text-gold">{fmt(isFinal ? current.final_avg : current.r1_avg, 1)}</strong>/100
+                    Judges&apos; score:{" "}
+                    <strong className="text-gold">
+                      {fmt(toJudgePoints(Number(isFinal ? current.final_avg : current.r1_avg), judgeWeight), 1)}
+                    </strong>
+                    /{judgeWeight}
                   </p>
                 )}
                 <form action={clearStage}>

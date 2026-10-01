@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { getVoteLink } from "@/lib/qr";
 import { stageVoting } from "@/lib/voting";
-import { fmt, rankRound1 } from "@/lib/scoring";
+import { MAX_TOTAL, fmt, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import {
   CATEGORIES,
@@ -162,7 +162,7 @@ export default async function AdminPage({
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium">{r.name}</div>
                             <div className="text-xs text-muted">
-                              Judges {fmt(r.r1_avg, 2)} avg ({fmt(r.judgePoints, 1)}/{judgeWeight}) · 🗳{" "}
+                              Judges {fmt(r.r1_avg, 2)}/{MAX_TOTAL} avg ({fmt(r.judgePoints, 1)}/{judgeWeight}) · 🗳{" "}
                               {r.r1_votes ?? 0} votes ({fmt(r.audiencePoints, 1)}/{100 - judgeWeight}) · vocal{" "}
                               {fmt(r.r1_vocal_avg, 1)} · {r.r1_judges}/{activeJudges.length} judges
                             </div>
@@ -203,7 +203,7 @@ export default async function AdminPage({
               ))}
             </div>
             <p className="text-xs text-muted">
-              Each round&apos;s score = judges&apos; average × {judgeWeight}% + audience points. The performer
+              Each round&apos;s score = judges&apos; points out of {judgeWeight} (average sheet total out of {MAX_TOTAL}, each area scored 0–5) + audience points. The performer
               with the most votes in a category (that round) gets the full {100 - judgeWeight} audience points;
               others get points in proportion to the leader&apos;s votes. Ties are broken by vocal quality.
             </p>

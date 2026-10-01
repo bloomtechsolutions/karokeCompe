@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentProfile, getLeaderboard, getSettings } from "@/lib/data";
-import { rankFinal, rankRound1 } from "@/lib/scoring";
+import { MAX_TOTAL, rankFinal, rankRound1 } from "@/lib/scoring";
 import { CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function GET() {
   const judgeWeight = Number(settings.judge_weight);
 
   const lines: unknown[][] = [
-    ["Round", "Category", "Rank", "Name", "Department", "Song", "Judges scored", "Judge avg (/100)",
+    ["Round", "Category", "Rank", "Name", "Department", "Song", "Judges scored", `Judge avg (/${MAX_TOTAL})`,
      `Judge points (/${judgeWeight})`, "Votes", `Audience points (/${100 - judgeWeight})`, "Round score", "Finalist"],
   ];
   for (const c of CATEGORIES) {

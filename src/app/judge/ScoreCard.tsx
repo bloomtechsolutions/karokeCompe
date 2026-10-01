@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
-import { CRITERIA, type CriterionKey } from "@/lib/scoring";
+import { CRITERIA, MAX_TOTAL, fmt, toJudgePoints, type CriterionKey } from "@/lib/scoring";
 import { CATEGORY_LABEL, type Contestant, type Round, type Score } from "@/lib/types";
 import { saveScore, type SaveScoreState } from "./actions";
 
@@ -14,6 +14,8 @@ type Props = {
   existing: Score | null;
   onStage?: boolean;
   missed?: boolean;
+  /** Judges' share of the score (70): the sheet total out of 25 converts to these points. */
+  judgeWeight: number;
 };
 
 type Values = Record<CriterionKey, number>;
@@ -38,7 +40,16 @@ function writeDraft(key: string, values: Values | null) {
   }
 }
 
-export function ScoreCard({ contestant, round, song, order, existing, onStage = false, missed = false }: Props) {
+export function ScoreCard({
+  contestant,
+  round,
+  song,
+  order,
+  existing,
+  onStage = false,
+  missed = false,
+  judgeWeight,
+}: Props) {
   const [state, action] = useActionState<SaveScoreState, FormData>(saveScore, {});
   const draftKey = `score-draft:${round}:${contestant.id}`;
   const [values, setValues] = useState<Values>(() => {
@@ -54,7 +65,10 @@ export function ScoreCard({ contestant, round, song, order, existing, onStage = 
     if (existing) return;
     const draft = readDraft(draftKey);
     if (draft) {
-      setValues(draft);
+      // Clamp drafts saved under an older scale.
+      const v = {} as Values;
+      for (const c of CRITERIA) v[c.key] = Math.max(0, Math.min(c.max, Math.round(Number(draft[c.key]) || 0)));
+      setValues(v);
       setDirty(true);
     }
   }, [draftKey, existing]);
@@ -100,7 +114,10 @@ export function ScoreCard({ contestant, round, song, order, existing, onStage = 
           </div>
         </div>
         <div className="text-right">
-          <div className="text-lg font-bold tabular-nums">{total}</div>
+          <div className="text-lg font-bold tabular-nums">
+            {fmt(toJudgePoints(total, judgeWeight), 1)}
+            <span className="text-xs font-normal text-muted">/{judgeWeight}</span>
+          </div>
           <div className={`text-[11px] ${saved ? "text-emerald-300" : "text-muted"}`}>
             {saved ? "Saved" : dirty ? "Unsaved" : "Not scored"}
           </div>
@@ -115,44 +132,33 @@ export function ScoreCard({ contestant, round, song, order, existing, onStage = 
         >
           <input type="hidden" name="contestant_id" value={contestant.id} />
           {CRITERIA.map((c) => (
-            <div key={c.key}>
-              <div className="flex items-baseline justify-between gap-2">
-                <label htmlFor={`${contestant.id}-${c.key}`} className="text-sm font-medium">
-                  {c.label} <span className="text-xs text-muted">· {c.hint}</span>
-                </label>
-                <span className="shrink-0 text-sm tabular-nums">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={c.max}
-                    value={values[c.key]}
-                    onChange={(e) => {
-                      const n = Math.max(0, Math.min(c.max, Math.round(Number(e.target.value) || 0)));
+            <fieldset key={c.key}>
+              <legend className="text-sm font-medium">
+                {c.label} <span className="text-xs text-muted">· {c.hint}</span>
+              </legend>
+              <input type="hidden" name={c.key} value={values[c.key]} />
+              <div className="mt-2 grid grid-cols-6 gap-1.5" role="radiogroup" aria-label={`${c.label} score`}>
+                {Array.from({ length: c.max + 1 }, (_, n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    role="radio"
+                    aria-checked={values[c.key] === n}
+                    onClick={() => {
                       setValues((v) => ({ ...v, [c.key]: n }));
                       setDirty(true);
                     }}
-                    className="w-14 rounded-md border border-line bg-bg/60 px-1.5 py-1 text-right font-semibold"
-                    aria-label={`${c.label} score`}
-                  />
-                  <span className="text-muted"> / {c.max}</span>
-                </span>
+                    className={`h-11 rounded-lg text-lg font-bold tabular-nums transition ${
+                      values[c.key] === n
+                        ? "bg-accent text-white ring-2 ring-accent-2"
+                        : "border border-line bg-bg/50 text-muted hover:bg-panel-2"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
               </div>
-              <input
-                id={`${contestant.id}-${c.key}`}
-                name={c.key}
-                type="range"
-                min={0}
-                max={c.max}
-                step={1}
-                value={values[c.key]}
-                onChange={(e) => {
-                  setValues((v) => ({ ...v, [c.key]: Number(e.target.value) }));
-                  setDirty(true);
-                }}
-                className="mt-2 h-8 w-full accent-[var(--color-accent)]"
-              />
-            </div>
+            </fieldset>
           ))}
           <textarea
             name="comments"
@@ -162,13 +168,26 @@ export function ScoreCard({ contestant, round, song, order, existing, onStage = 
             maxLength={500}
             className="field text-sm"
           />
+          <div className="flex items-center justify-between rounded-xl bg-bg/50 px-4 py-2.5 text-sm">
+            <span className="text-muted">
+              Total <strong className="text-ink tabular-nums">{total}</strong>/{MAX_TOTAL}
+            </span>
+            <span className="font-semibold text-gold tabular-nums">
+              = {fmt(toJudgePoints(total, judgeWeight), 1)} / {judgeWeight} points
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <SubmitButton className="btn-primary flex-1">
-              {existing || state.ok ? "Update score" : "Submit score"} · {total}/100
+              {existing || state.ok ? "Update score" : "Submit score"} · {total}/{MAX_TOTAL}
             </SubmitButton>
           </div>
           {state.error && <p className="text-sm text-red-300">{state.error}</p>}
-          {state.ok && !dirty && <p className="text-sm text-emerald-300">Score saved ({state.total}/100).</p>}
+          {state.ok && !dirty && (
+            <p className="text-sm text-emerald-300">
+              Score saved ({state.total}/{MAX_TOTAL} = {fmt(toJudgePoints(state.total ?? 0, judgeWeight), 1)}/
+              {judgeWeight} points).
+            </p>
+          )}
         </form>
       )}
     </article>

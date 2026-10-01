@@ -15,19 +15,20 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 1. **Registration** – the organiser adds performers (a duet is one entry with both names), their songs and running order, and creates judge accounts.
 2. **1st Round** – the organiser sets the stage to *1st Round*. Each judge scores every performer on the official sheet:
 
-   | Criteria | Points |
+   | Criteria | Score |
    | --- | --- |
-   | Vocal Quality – pitch, tone and clarity | 30 |
-   | Rhythm & Timing – staying in sync with the music | 20 |
-   | Stage Presence – confidence and audience engagement | 20 |
-   | Song Interpretation – emotion and expression | 15 |
-   | Overall Performance – entertainment value and impact | 15 |
-   | **Total** | **100** |
+   | Vocal Quality – pitch, tone and clarity | 0–5 |
+   | Rhythm & Timing – staying in sync with the music | 0–5 |
+   | Stage Presence – confidence and audience engagement | 0–5 |
+   | Song Interpretation – emotion and expression | 0–5 |
+   | Overall Performance – entertainment value and impact | 0–5 |
+   | **Sheet total** | **25** |
 
-   **1st round score = judges' average × 70% + audience points (30)**, the same formula as the final. Audience voting opens in each category as soon as its first performer is called to the stage. Performers join the ballot as they go on. Voting stays open until the organiser closes it in *Live control*. Each person gets one vote per category in this round. Ties are broken by average vocal quality.
+   The judges' average sheet total is converted to **judges' points out of 70** (e.g. an average of 20/25 = 56 points).
+   **1st round score = judges' points (70) + audience points (30)**, the same formula as the final. Audience voting opens in each category as soon as its first performer is called to the stage. Performers join the ballot as they go on. Voting stays open until the organiser closes it in *Live control*. Each person gets one vote per category in this round. Ties are broken by average vocal quality.
 3. **Finalists** – close 1st round voting, then on *Results* click **Advance top 3** for each category (the count can be changed in Settings; a tie at the cut-off includes everyone tied). Finalists can also be added/removed by hand.
 4. **Final Round** – set the stage to *Final Round* (this locks 1st round scores) and enter each finalist's final song, which must be different from their 1st round song. Judges score finalists with the same sheet; open **audience voting** and show the QR code from *Live control*.
-   - **Final score = judges' average × 70% + audience points (30).**
+   - **Final score = judges' points (70) + audience points (30).**
    - The finalist with the most votes in a category gets the full 30 audience points; the others get points in proportion to the leader's votes (e.g. half the leader's votes = 15 points).
    - The 70/30 split can be changed in Settings.
 5. Close voting, then set the stage to *Completed*. Each finalist's vote count updates live on the TV (hidden if "Show scores" is off). Download a CSV of the results from *Results*.
