@@ -6,7 +6,7 @@ import { requireHost } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { fmt, rankFinal, rankRound1, toJudgePoints } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORIES, CATEGORY_LABEL, type Category, type LeaderboardRow } from "@/lib/types";
+import { CATEGORIES, CATEGORY_LABEL, finalistsFor, type Category, type LeaderboardRow } from "@/lib/types";
 import { nextInLine, round1Candidates, stageVoting } from "@/lib/voting";
 import { logout } from "../login/actions";
 import { callToStage, clearStage } from "./actions";
@@ -110,7 +110,7 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
               Our judges score every performance from 0 to 5 on vocal quality, rhythm and timing, stage presence, song
               interpretation and overall performance. That&apos;s worth {judgeWeight} points, and{" "}
               <strong>your vote</strong> is worth the other {100 - judgeWeight} points in both rounds. Scan the QR code on the screen once the performances
-              start. The best {settings.finalists_per_category} in each category go through to the final.
+              start. The top {settings.finalists_solo} solo singers and top {settings.finalists_duet} duets go through to the final.
             </Script>
             <p className="text-sm text-muted">
               The first performer appears here as soon as the organiser starts the 1st round.
@@ -220,7 +220,7 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
               const top = marked.length
                 ? marked
                 : rankRound1(rows, c, judgeWeight).filter(
-                    (r) => r.rank <= settings.finalists_per_category && r.r1_judges > 0,
+                    (r) => r.rank <= finalistsFor(settings, c) && r.r1_judges > 0,
                   );
               if (top.length === 0) return null;
               return (

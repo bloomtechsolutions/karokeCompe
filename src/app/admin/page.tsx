@@ -14,6 +14,7 @@ import {
   CATEGORIES,
   CATEGORY_LABEL,
   STAGE_LABEL,
+  finalistsFor,
   type Contestant,
   type LeaderboardRow,
   type Profile,
@@ -29,6 +30,7 @@ import {
   nextOnStage,
   resetJudgePassword,
   saveContestant,
+  setAnnounce,
   setJudgeActive,
   setOnStage,
   setStage,
@@ -141,6 +143,29 @@ export default async function AdminPage({
                 Download results (CSV)
               </a>
             </div>
+            <section
+              className={`card flex flex-wrap items-center justify-between gap-3 ${settings.announce_r1 ? "border-gold/70" : ""}`}
+            >
+              <div>
+                <h2 className="font-bold">Round 1 results on the TV</h2>
+                <p className="text-sm text-muted">
+                  {settings.announce_r1
+                    ? "The TV is showing the finalists."
+                    : "When the finalists are confirmed, show them on the TV dashboard (this also closes 1st round voting)."}{" "}
+                  Top {settings.finalists_solo} solo and top {settings.finalists_duet} duet go to the final.
+                </p>
+              </div>
+              <form action={setAnnounce}>
+                <input type="hidden" name="on" value={String(!settings.announce_r1)} />
+                <SubmitButton
+                  className={settings.announce_r1 ? "btn-ghost" : "btn-primary"}
+                  disabled={!settings.announce_r1 && settings.stage !== "round1"}
+                  pendingText="…"
+                >
+                  {settings.announce_r1 ? "Hide from TV" : "🏆 Announce finalists on TV"}
+                </SubmitButton>
+              </form>
+            </section>
             <h2 className="text-lg font-bold">1st Round</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {CATEGORIES.map((category) => {
@@ -152,7 +177,7 @@ export default async function AdminPage({
                       <form action={advanceTop}>
                         <input type="hidden" name="category" value={category} />
                         <SubmitButton className="btn-primary text-sm" pendingText="Selecting…">
-                          Advance top {settings.finalists_per_category}
+                          Advance top {finalistsFor(settings, category)}
                         </SubmitButton>
                       </form>
                     </div>
@@ -233,20 +258,31 @@ export default async function AdminPage({
                 <span className="text-sm font-medium">Event name</span>
                 <input name="event_name" defaultValue={settings.event_name} className="field" />
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Finalists per category</span>
+                  <span className="text-sm font-medium">Solo finalists</span>
                   <input
-                    name="finalists_per_category"
+                    name="finalists_solo"
                     type="number"
                     min={1}
                     max={20}
-                    defaultValue={settings.finalists_per_category}
+                    defaultValue={settings.finalists_solo}
                     className="field"
                   />
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Final: judges weight %</span>
+                  <span className="text-sm font-medium">Duet finalists</span>
+                  <input
+                    name="finalists_duet"
+                    type="number"
+                    min={1}
+                    max={20}
+                    defaultValue={settings.finalists_duet}
+                    className="field"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Judges weight %</span>
                   <input
                     name="judge_weight"
                     type="number"

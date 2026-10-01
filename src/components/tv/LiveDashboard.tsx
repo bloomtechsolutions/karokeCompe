@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { rankFinal, rankRound1, toJudgePoints } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
+import { AutoScroll } from "./AutoScroll";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
 import { activeFinalCategories, nextInLine, stageVoting } from "@/lib/voting";
 import { useFlash } from "./hooks";
@@ -16,7 +17,9 @@ export type DashboardProps = {
   stage: Stage;
   showScores: boolean;
   votingOpen: boolean;
-  finalistsPerCategory: number;
+  finalists: Record<Category, number>;
+  /** Organiser is announcing the 1st round results (finalists). */
+  announceR1: boolean;
   judgeWeight: number;
   nowPerforming: string | null;
   lastOnStage: string | null;
@@ -28,7 +31,8 @@ export type DashboardProps = {
 
 export function LiveDashboard(props: DashboardProps) {
   const { stage, rows, showScores, nowPerforming } = props;
-  const live = stage === "round1" || stage === "final";
+  const announcing = stage === "round1" && props.announceR1;
+  const live = (stage === "round1" || stage === "final") && !announcing;
   const onStage = live ? (rows.find((r) => r.contestant_id === nowPerforming) ?? null) : null;
   const openCategories = CATEGORIES.filter((c) => stageVoting(stage, rows, c, nowPerforming).ready);
   const showVote = live && props.votingOpen && props.vote != null && openCategories.length > 0;
@@ -61,6 +65,8 @@ export function LiveDashboard(props: DashboardProps) {
 
       <main className={`relative z-10 flex min-h-0 flex-1 flex-col px-[1.5rem] pb-[1.5rem] ${idle ? "pt-[1.5rem]" : ""}`}>
         {stage === "setup" && <SetupView rows={rows} />}
+
+        {announcing && <Round1Results {...props} />}
 
         {live && (
           <div
@@ -101,7 +107,7 @@ export function LiveDashboard(props: DashboardProps) {
                     rows={rows}
                     judgeCount={props.judgeCount}
                     showScores={showScores}
-                    finalists={props.finalistsPerCategory}
+                    finalists={props.finalists[c]}
                     nowPerforming={nowPerforming}
                     judgeWeight={props.judgeWeight}
                     compact={onStage != null}
@@ -498,6 +504,84 @@ function Podium({ category, rows, judgeWeight }: { category: Category; rows: Lea
         </div>
       )}
     </section>
+  );
+}
+
+/** 1st round results: who goes through to the final, per category. */
+function Round1Results({ rows, showScores, judgeWeight }: DashboardProps) {
+  return (
+    <>
+      <Confetti />
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        <div className="pop-in flex items-center justify-center gap-[1.5rem] text-center">
+          <LogoOrb size="clamp(5rem, 13dvh, 8rem)" minimal />
+          <div>
+            <div className="text-[1.2rem] font-bold tracking-[0.5em] text-accent-2 uppercase">1st Round Results</div>
+            <div className="font-script text-[clamp(3rem,8dvh,5rem)] leading-none text-gold">Going to the Final</div>
+          </div>
+        </div>
+        <div className="mt-[clamp(1rem,3dvh,2rem)] grid min-h-0 flex-1 gap-[1.5rem] lg:grid-cols-2">
+          {CATEGORIES.map((c) => {
+            const finalists = showScores
+              ? rankRound1(rows, c, judgeWeight).filter((r) => r.is_finalist)
+              : rows
+                  .filter((r) => r.category === c && r.is_finalist)
+                  .sort((a, b) => (a.performance_order ?? 999) - (b.performance_order ?? 999))
+                  .map((r) => ({ ...r, rank: null as number | null, score: null as number | null }));
+            return (
+              <section
+                key={c}
+                className="flex min-h-0 flex-col rounded-3xl border-2 border-gold/50 bg-panel/70 p-[1.4rem] backdrop-blur-sm"
+              >
+                <h2 className="text-center text-[2.2rem] font-extrabold tracking-wide uppercase">
+                  {CATEGORY_LABEL[c]} <span className="text-gold">Finalists</span>
+                </h2>
+                {finalists.length === 0 ? (
+                  <p className="py-[3rem] text-center text-[1.3rem] text-muted">To be announced…</p>
+                ) : (
+                  <AutoScrollList>
+                    {finalists.map((r, i) => (
+                      <li
+                        key={r.contestant_id}
+                        className="pop-in flex items-center gap-[1rem] rounded-2xl bg-bg/50 px-[1.2rem] py-[0.8rem] ring-1 ring-gold/30"
+                        style={{ animationDelay: `${400 + i * 450}ms` }}
+                      >
+                        <span
+                          className={`inline-flex h-[3rem] w-[3rem] shrink-0 items-center justify-center rounded-full text-[1.4rem] font-extrabold ${
+                            r.rank != null && r.rank <= 3
+                              ? ["bg-gold text-bg", "bg-zinc-200 text-bg", "bg-amber-700 text-white"][r.rank - 1]
+                              : "bg-accent text-white"
+                          }`}
+                        >
+                          {r.rank ?? "★"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[1.7rem] leading-tight font-extrabold">{r.name}</div>
+                          {r.department && <div className="truncate text-[1rem] text-muted">{r.department}</div>}
+                        </div>
+                        {r.score != null && (
+                          <span className="shrink-0 text-[2rem] font-extrabold text-gold tabular-nums">
+                            <AnimatedNumber value={r.score} duration={1800} />
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </AutoScrollList>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function AutoScrollList({ children }: { children: React.ReactNode }) {
+  return (
+    <AutoScroll className="mt-[1rem] min-h-0 flex-1">
+      <ol className="space-y-[0.7rem]">{children}</ol>
+    </AutoScroll>
   );
 }
 

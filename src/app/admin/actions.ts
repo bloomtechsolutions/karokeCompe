@@ -7,7 +7,7 @@ import { getLeaderboard, getSettings } from "@/lib/data";
 import { rankRound1 } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORIES, type Category, type Stage } from "@/lib/types";
+import { CATEGORIES, finalistsFor, type Category, type Stage } from "@/lib/types";
 
 const STAGES: Stage[] = ["setup", "round1", "final", "completed"];
 
@@ -56,8 +56,9 @@ export async function setStage(formData: FormData) {
   // Starting a round arms audience voting. In round 1 each category opens as
   // soon as its first performer is on stage; in the final, once all its
   // finalists have performed. It stays open until the organiser closes it.
-  const patch: { stage: Stage; voting_open: boolean; now_performing: null } = {
+  const patch: { stage: Stage; voting_open: boolean; now_performing: null; announce_r1: false } = {
     stage,
+    announce_r1: false,
     voting_open: stage === "round1" || stage === "final",
     now_performing: null,
   };
@@ -80,11 +81,38 @@ export async function setVoting(formData: FormData) {
   done(open ? "Audience voting opened." : "Audience voting closed.");
 }
 
+/** Show or hide the 1st round results (the finalists) on the TV. */
+export async function setAnnounce(formData: FormData) {
+  await requireAdmin();
+  const on = str(formData, "on") === "true";
+  const settings = await getSettings();
+  if (on && settings.stage !== "round1") fail("Round 1 results can be shown during the 1st Round.", "results");
+  if (on) {
+    const supabase = await createClient();
+    const { count } = await supabase
+      .from("contestants")
+      .select("id", { count: "exact", head: true })
+      .eq("is_finalist", true);
+    if (!count) fail("Select the finalists first (Advance top or Make finalist).", "results");
+  }
+  const supabase = await createClient();
+  // Clear the stage so the TV switches to the results, and stop round 1
+  // voting so the announced finalists can't be overtaken.
+  const patch = on ? { announce_r1: true, now_performing: null, voting_open: false } : { announce_r1: false };
+  const { error } = await supabase.from("settings").update(patch).eq("id", 1);
+  if (error) fail(error.message, "results");
+  await audit(on ? "announce_r1" : "hide_r1", "settings", "1");
+  done(on ? "Round 1 results are on the TV." : "Round 1 results hidden from the TV.", "results");
+}
+
 export async function updateSettings(formData: FormData) {
   await requireAdmin();
-  const finalists = optInt(formData, "finalists_per_category");
+  const finalistsSolo = optInt(formData, "finalists_solo");
+  const finalistsDuet = optInt(formData, "finalists_duet");
   const judgeWeight = Number(str(formData, "judge_weight"));
-  if (!finalists || finalists < 1 || finalists > 20) fail("Finalists per category must be 1–20.", "settings");
+  for (const n of [finalistsSolo, finalistsDuet]) {
+    if (!n || n < 1 || n > 20) fail("Finalists per category must be 1–20.", "settings");
+  }
   if (!Number.isFinite(judgeWeight) || judgeWeight < 0 || judgeWeight > 100)
     fail("Judge weight must be 0–100.", "settings");
 
@@ -94,7 +122,8 @@ export async function updateSettings(formData: FormData) {
     require_voter_id: formData.get("require_voter_id") === "on",
     block_repeat_ip: formData.get("block_repeat_ip") === "on",
     require_checkin: formData.get("require_checkin") === "on",
-    finalists_per_category: finalists,
+    finalists_solo: finalistsSolo,
+    finalists_duet: finalistsDuet,
     judge_weight: judgeWeight,
   };
   const supabase = await createClient();
@@ -214,7 +243,8 @@ export async function advanceTop(formData: FormData) {
     (r) => r.r1_judges > 0,
   );
   // Ties at the cut-off are all included.
-  const top = ranked.filter((r) => r.rank <= settings.finalists_per_category);
+  const count = finalistsFor(settings, category);
+  const top = ranked.filter((r) => r.rank <= count);
   if (top.length === 0) fail("No round 1 scores yet in this category.", "results");
 
   const supabase = await createClient();
@@ -226,7 +256,7 @@ export async function advanceTop(formData: FormData) {
     .in("id", top.map((r) => r.contestant_id));
   if (error) fail(error.message, "results");
   await audit("finalists_advance", "category", category, { ids: top.map((r) => r.contestant_id) });
-  const tieNote = top.length > settings.finalists_per_category ? " (includes a tie at the cut-off)" : "";
+  const tieNote = top.length > count ? " (includes a tie at the cut-off)" : "";
   done(`${top.length} ${category} finalists selected${tieNote}.`, "results");
 }
 

@@ -13,7 +13,12 @@ export type Settings = {
   /** Only staff IDs entered at the venue check-in desk can vote. */
   require_checkin: boolean;
   show_scores: boolean;
+  /** Legacy single count; use finalists_solo / finalists_duet. */
   finalists_per_category: number;
+  finalists_solo: number;
+  finalists_duet: number;
+  /** Show the 1st round results (finalists) on the TV. */
+  announce_r1: boolean;
   judge_weight: number;
   now_performing: string | null;
   /** Last performer called to the stage this round (kept after the stage is cleared). */
@@ -85,3 +90,11 @@ export const STAGE_LABEL: Record<Stage, string> = {
   final: "Final Round",
   completed: "Completed",
 };
+
+/** How many performers in a category go through to the final (top 5 solo, top 3 duet by default). */
+export function finalistsFor(
+  settings: Pick<Settings, "finalists_solo" | "finalists_duet">,
+  category: Category,
+): number {
+  return category === "solo" ? settings.finalists_solo : settings.finalists_duet;
+}

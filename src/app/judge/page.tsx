@@ -40,6 +40,8 @@ export default async function JudgePage() {
   // Up next: not yet performed, starting after whoever is on stage.
   const upNext = nextInLine(queue, (c) => c.id, settings.now_performing ?? settings.last_on_stage, performed);
   const missed = queue.filter((c) => performed(c) && !myScores.has(c.id));
+  // Everyone this judge has scored (except whoever is on stage), to review or change.
+  const scored = queue.filter((c) => c !== current && myScores.has(c.id));
   const done = queue.filter((c) => myScores.has(c.id)).length;
 
   const songOf = (c: Contestant) => (round === "final" ? c.song_final : c.song_round1);
@@ -122,6 +124,29 @@ export default async function JudgePage() {
                     existing={null}
                     judgeWeight={Number(settings.judge_weight)}
                     missed
+                  />
+                ))}
+              </section>
+            )}
+
+            {scored.length > 0 && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-bold tracking-wide text-muted uppercase">
+                  Your scores · {scored.length}
+                </h2>
+                <p className="text-xs text-muted">
+                  Tap a performer to change their score. You can change scores until the{" "}
+                  {round === "final" ? "competition ends" : "1st round ends"}.
+                </p>
+                {scored.map((c) => (
+                  <ScoreCard
+                    key={`${c.id}-${round}`}
+                    contestant={c}
+                    round={round}
+                    song={songOf(c)}
+                    order={orderLabel(c)}
+                    existing={myScores.get(c.id) ?? null}
+                    judgeWeight={Number(settings.judge_weight)}
                   />
                 ))}
               </section>

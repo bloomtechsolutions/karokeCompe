@@ -24,7 +24,8 @@ export default async function DashboardPage() {
         stage={settings.stage}
         showScores={settings.show_scores}
         votingOpen={settings.voting_open}
-        finalistsPerCategory={settings.finalists_per_category}
+        finalists={{ solo: settings.finalists_solo, duet: settings.finalists_duet }}
+        announceR1={settings.announce_r1}
         judgeWeight={Number(settings.judge_weight)}
         nowPerforming={settings.now_performing}
         lastOnStage={settings.last_on_stage}

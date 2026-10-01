@@ -27,7 +27,8 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 
    The judges' average sheet total is converted to **judges' points out of 70** (e.g. an average of 20/25 = 56 points).
    **1st round score = judges' points (70) + audience points (30)**, the same formula as the final. Audience voting opens in each category as soon as its first performer is called to the stage. Performers join the ballot as they go on. Voting stays open until the organiser closes it in *Live control*. Each person gets one vote per category in this round. Ties are broken by average vocal quality.
-3. **Finalists** – close 1st round voting, then on *Results* click **Advance top 3** for each category (the count can be changed in Settings; a tie at the cut-off includes everyone tied). Finalists can also be added/removed by hand.
+3. **Finalists** – on *Results* click **Advance top 5** for Solo and **Advance top 3** for Duet. You can change these counts in Settings. A tie at the cut-off includes everyone tied, and finalists can also be added or removed by hand. Then click **🏆 Announce finalists on TV**: the TV shows a *1st Round Results – Going to the Final* screen, and 1st round voting closes. Click **Hide from TV** to go back to the boards.
+   - Judges can review and change any of their scores (*Your scores* on the judge page) until the 1st round ends, i.e. when the organiser moves to the Final.
 4. **Final Round** – set the stage to *Final Round* (this locks 1st round scores) and enter each finalist's final song, which must be different from their 1st round song. Judges score finalists with the same sheet; open **audience voting** and show the QR code from *Live control*.
    - **Final score = judges' points (70) + audience points (30).**
    - The finalist with the most votes in a category gets the full 30 audience points; the others get points in proportion to the leader's votes (e.g. half the leader's votes = 15 points).
