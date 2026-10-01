@@ -9,6 +9,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 | `/judge` Scoring | Judges | Yes |
 | `/host` Host (MC) cue cards | Host: who's on stage, who's next, what to say, call the next act | Yes (Host account, or organiser) |
 | `/admin` Organiser panel | Organiser | Yes |
+| `/checkin` Venue check-in | Check-in desk: enters the staff IDs of people at the venue | Yes (Check-in account, or organiser) |
 
 ## How the competition works in the app
 
@@ -35,6 +36,7 @@ A web app for running the karaoke competition (Solo & Duet), built with Next.js,
 
 **Audience voting (no login).**
 - **Staff ID:** voters enter their staff ID, and each staff ID can vote once per category.
+- **Venue check-in:** only staff IDs entered on the `/checkin` page can vote. In *Admin → Judges*, create an account with the role *Check-in desk*. That person types in (or pastes) the staff IDs of people at the venue, and can see who has voted (not who they voted for). This can be turned off in Settings (*Only checked-in staff can vote*).
 - **IP address:** each vote is logged with the voter's IP, and a second vote from the same IP in a category is blocked. Phones on the same Wi-Fi share one public IP, so turn this off in Settings if the audience votes over the venue Wi-Fi.
 - **Device:** a second vote from the same browser is also blocked.
 - **Changing a vote:** voters can change their vote **once** per category per round, from the same phone, while voting is still open. The change and the original choice both appear in *Admin → Votes*.

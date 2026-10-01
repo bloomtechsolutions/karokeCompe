@@ -86,6 +86,7 @@ export default async function AdminPage({
         eventName={settings.event_name}
         right={
           <>
+            <NavLink href="/checkin">Check-in</NavLink>
             <NavLink href="/">Dashboard</NavLink>
             <form action={logout}>
               <button className="rounded-lg px-3 py-2 text-muted hover:bg-panel-2 hover:text-ink">Sign out</button>
@@ -216,6 +217,7 @@ export default async function AdminPage({
           <JudgesTab
             judges={judges}
             hosts={profiles.filter((p) => p.role === "host")}
+            checkins={profiles.filter((p) => p.role === "checkin")}
             scores={scores}
             contestants={contestants}
           />
@@ -279,6 +281,20 @@ export default async function AdminPage({
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
+                  name="require_checkin"
+                  defaultChecked={settings.require_checkin}
+                  className="mt-1 h-5 w-5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">Only checked-in staff can vote</span>
+                  <span className="block text-xs text-muted">
+                    Staff IDs must be entered on the <a href="/checkin" className="underline">Check-in</a> page first.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
                   name="block_repeat_ip"
                   defaultChecked={settings.block_repeat_ip}
                   className="mt-1 h-5 w-5"
@@ -303,6 +319,7 @@ export default async function AdminPage({
                 <option value="votes">Audience votes</option>
                 <option value="scores">Judge scores</option>
                 <option value="all">Scores and votes</option>
+                <option value="staff">Checked-in staff list</option>
               </select>
               <input name="confirm" placeholder="Type RESET to confirm" className="field" autoComplete="off" />
               <SubmitButton className="btn border border-red-700 text-red-200 hover:bg-red-950">Clear data</SubmitButton>
@@ -638,11 +655,13 @@ function PersonCard({ person }: { person: Profile }) {
 function JudgesTab({
   judges,
   hosts,
+  checkins,
   scores,
   contestants,
 }: {
   judges: Profile[];
   hosts: Profile[];
+  checkins: Profile[];
   scores: Score[];
   contestants: Contestant[];
 }) {
@@ -656,10 +675,11 @@ function JudgesTab({
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <form action={createJudge} className="card h-fit space-y-4">
-          <h2 className="text-lg font-bold">Add judge or host</h2>
+          <h2 className="text-lg font-bold">Add an account</h2>
           <select name="role" defaultValue="judge" className="field">
             <option value="judge">Judge: scores performances</option>
             <option value="host">Host (MC): reads out who&apos;s next, calls performers</option>
+            <option value="checkin">Check-in desk: enters the staff IDs of people at the venue</option>
           </select>
           <input name="full_name" required placeholder="Full name" className="field" />
           <input name="email" type="email" required placeholder="Email (used to sign in)" className="field" />
@@ -677,6 +697,15 @@ function JudgesTab({
             <p className="card text-sm text-muted">No host yet. The host signs in and is taken to the Host page.</p>
           )}
           {hosts.map((h) => (
+            <PersonCard key={h.id} person={h} />
+          ))}
+          <h2 className="pt-3 text-lg font-bold">Check-in desk</h2>
+          {checkins.length === 0 && (
+            <p className="card text-sm text-muted">
+              No check-in account yet. It signs in and is taken to the Check-in page, where it enters staff IDs.
+            </p>
+          )}
+          {checkins.map((h) => (
             <PersonCard key={h.id} person={h} />
           ))}
         </section>
@@ -731,6 +760,7 @@ const VOTE_RESULT_LABEL: Record<string, string> = {
   already_voted: "Same device",
   voter_id_used: "Staff ID already voted",
   ip_used: "IP already voted",
+  not_checked_in: "Staff ID not checked in",
   change_closed: "Change: voting closed",
   change_invalid: "Change: invalid",
   change_not_ready: "Change: not on the ballot yet",

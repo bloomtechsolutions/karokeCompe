@@ -1,7 +1,7 @@
 export type Category = "solo" | "duet";
 export type Stage = "setup" | "round1" | "final" | "completed";
 export type Round = "round1" | "final";
-export type Role = "judge" | "admin" | "host";
+export type Role = "judge" | "admin" | "host" | "checkin";
 
 export type Settings = {
   id: number;
@@ -10,6 +10,8 @@ export type Settings = {
   voting_open: boolean;
   require_voter_id: boolean;
   block_repeat_ip: boolean;
+  /** Only staff IDs entered at the venue check-in desk can vote. */
+  require_checkin: boolean;
   show_scores: boolean;
   finalists_per_category: number;
   judge_weight: number;

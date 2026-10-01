@@ -93,6 +93,7 @@ export async function updateSettings(formData: FormData) {
     show_scores: formData.get("show_scores") === "on",
     require_voter_id: formData.get("require_voter_id") === "on",
     block_repeat_ip: formData.get("block_repeat_ip") === "on",
+    require_checkin: formData.get("require_checkin") === "on",
     finalists_per_category: finalists,
     judge_weight: judgeWeight,
   };
@@ -238,8 +239,9 @@ export async function createJudge(formData: FormData) {
   const fullName = str(formData, "full_name");
   const email = str(formData, "email").toLowerCase();
   const password = str(formData, "password");
-  const role = str(formData, "role") === "host" ? "host" : "judge";
-  const label = role === "host" ? "Host" : "Judge";
+  const picked = str(formData, "role");
+  const role = picked === "host" || picked === "checkin" ? picked : "judge";
+  const label = role === "host" ? "Host" : role === "checkin" ? "Check-in account" : "Judge";
   if (!fullName || !email) fail("Name and email are required.", "judges");
   if (password.length < 8) fail("Password must be at least 8 characters.", "judges");
 
@@ -305,6 +307,11 @@ export async function clearData(formData: FormData) {
     const stage = await admin.from("settings").update({ now_performing: null, last_on_stage: null }).eq("id", 1);
     if (stage.error) fail(stage.error.message, "settings");
   }
+  if (what === "staff") {
+    const { error } = await admin.from("venue_staff").delete().not("staff_id", "is", null);
+    if (error) fail(error.message, "settings");
+  }
   await audit("clear_data", "competition", null, { what });
-  done(`Cleared ${what === "all" ? "scores and votes" : what}.`, "settings");
+  const label = what === "all" ? "scores and votes" : what === "staff" ? "the checked-in staff list" : what;
+  done(`Cleared ${label}.`, "settings");
 }

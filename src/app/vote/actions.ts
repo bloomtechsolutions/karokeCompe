@@ -15,6 +15,7 @@ const MESSAGES: Record<string, string> = {
   already_voted: "You have already voted in this category from this device.",
   voter_id_used: "This staff ID has already voted in this category.",
   ip_used: "A vote in this category has already been casted by you. Thankyou",
+  not_checked_in: "Your staff ID isn't on the venue list. Please check in at the registration desk, then try again.",
 };
 
 /** Client IP as seen by Vercel's edge (which overwrites any client-supplied value). */

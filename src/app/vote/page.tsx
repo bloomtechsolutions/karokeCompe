@@ -79,7 +79,7 @@ export default async function VotePage() {
             Voting is not open right now. Please check back when the performances start.
           </div>
         ) : (
-          <VoteBooth categories={categories} requireVoterId={settings.require_voter_id} round={round} />
+          <VoteBooth categories={categories} requireVoterId={settings.require_voter_id || settings.require_checkin} round={round} />
         )}
       </main>
     </>
