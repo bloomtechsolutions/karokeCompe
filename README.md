@@ -62,7 +62,7 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
 ## Choosing the champions
 
 1. After the last finalist, **close voting**. Each judge's page then shows the final standings (judges' points + audience votes) and they **pick a champion** in each category.
-2. In *Admin → Results → Champions* you see each judge's pick, **confirm the champion** of each category (the judges' most-picked finalist is preselected) and **upload their photo** (resized in the browser).
+2. In *Admin → Results → Champions* you see each judge's pick, **confirm the champion** of each category (the judges' most-picked finalist is preselected) and **upload their photo** (resized in the browser; duets can have one photo per singer).
 3. Move the stage to **Completed**: the TV reveals both champions with their photos. Champions stay hidden from the public until then.
 
 ## Security

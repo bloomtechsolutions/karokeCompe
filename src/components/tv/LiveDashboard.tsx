@@ -491,7 +491,10 @@ function Champion({
   const winner = confirmed?.contestant_id
     ? ranked.find((r) => r.contestant_id === confirmed.contestant_id)
     : ranked.find((r) => r.finalScore != null && r.rank === 1);
-  const photo = confirmed?.contestant_id === winner?.contestant_id ? confirmed?.photo_url : null;
+  const photos =
+    confirmed?.contestant_id === winner?.contestant_id
+      ? [confirmed?.photo_url, confirmed?.photo_url_2].filter((p): p is string => !!p)
+      : [];
 
   return (
     <section className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-gold/60 bg-gradient-to-b from-gold/15 via-panel/70 to-panel/80 p-[1.4rem] text-center">
@@ -503,19 +506,41 @@ function Champion({
         <p className="relative py-[3rem] text-[1.3rem] text-muted">To be announced…</p>
       ) : (
         <div className="pop-in relative mt-[1rem] flex min-h-0 flex-col items-center" style={{ animationDelay: `${delay}ms` }}>
-          {photo ? (
-            <div className="glow-pulse rounded-[2rem] bg-gradient-to-br from-gold via-accent-2 to-gold p-[0.35rem]">
-              <img
-                src={photo}
-                alt={winner.name}
-                className="h-[clamp(11rem,42dvh,26rem)] w-auto max-w-[min(30rem,38vw)] rounded-[1.7rem] object-cover"
-              />
+          {photos.length > 0 ? (
+            <div className="flex items-center justify-center gap-[1rem]">
+              {photos.map((src, i) => (
+                <div
+                  key={src}
+                  className="glow-pulse pop-in rounded-[2rem] bg-gradient-to-br from-gold via-accent-2 to-gold p-[0.35rem]"
+                  style={{ animationDelay: `${delay + i * 350}ms` }}
+                >
+                  <img
+                    src={src}
+                    alt={winner.name}
+                    className={`w-auto rounded-[1.7rem] object-cover ${
+                      photos.length > 1
+                        ? "h-[clamp(9rem,34dvh,22rem)] max-w-[min(15rem,19vw)]"
+                        : "h-[clamp(11rem,42dvh,26rem)] max-w-[min(30rem,38vw)]"
+                    }`}
+                  />
+                </div>
+              ))}
             </div>
           ) : (
             <LogoOrb size="clamp(7rem, 22dvh, 12rem)" minimal />
           )}
-          <div className="shine-text mt-[1rem] text-[clamp(2.2rem,6dvh,4.2rem)] leading-[1.05] font-extrabold text-balance">
-            {winner.name}
+          <div
+            className={`shine-text mt-[1rem] leading-[1.05] font-extrabold text-balance ${
+              winner.name.length > 24 ? "text-[clamp(1.8rem,4.4dvh,3.1rem)]" : "text-[clamp(2.2rem,6dvh,4.2rem)]"
+            }`}
+          >
+            {/* Duets: one singer per line. */}
+            {winner.name.split(/\s*&\s*/).map((part, i, all) => (
+              <span key={i} className="block">
+                {part}
+                {i < all.length - 1 ? " &" : ""}
+              </span>
+            ))}
           </div>
           {winner.department && <div className="mt-[0.3rem] text-[1.2rem] text-muted">{winner.department}</div>}
         </div>

@@ -107,3 +107,6 @@ grant execute on function public.final_standings() to authenticated;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('winners', 'winners', true, 8388608, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do nothing;
+
+-- Duets: a second photo (one per singer). One photo of the pair also works.
+alter table public.champions add column if not exists photo_url_2 text;

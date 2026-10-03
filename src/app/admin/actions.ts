@@ -360,6 +360,22 @@ export async function clearData(formData: FormData) {
 
 const PHOTO_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
+/** Uploads a champion photo to the public "winners" bucket; null when no file was chosen. */
+async function uploadPhoto(
+  admin: ReturnType<typeof createAdminClient>,
+  category: Category,
+  photo: FormDataEntryValue | null,
+): Promise<string | null> {
+  if (!(photo instanceof File) || photo.size === 0) return null;
+  const ext = PHOTO_TYPES[photo.type];
+  if (!ext) fail("The photo must be a JPEG, PNG or WebP image.", "results");
+  if (photo.size > 8 * 1024 * 1024) fail("The photo is too large (max 8 MB).", "results");
+  const path = `${category}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await admin.storage.from("winners").upload(path, photo, { contentType: photo.type, upsert: false });
+  if (error) fail(`Could not upload the photo: ${error.message}`, "results");
+  return admin.storage.from("winners").getPublicUrl(path).data.publicUrl;
+}
+
 export async function saveChampion(formData: FormData) {
   const me = await requireAdmin();
   const category = str(formData, "category") as Category;
@@ -379,34 +395,28 @@ export async function saveChampion(formData: FormData) {
 
   const { data: existing } = await admin
     .from("champions")
-    .select("contestant_id, photo_url")
+    .select("contestant_id, photo_url, photo_url_2")
     .eq("category", category)
     .maybeSingle();
-  // Keep the photo only if the champion hasn't changed.
-  let photoUrl: string | null = existing?.contestant_id === contestantId ? (existing?.photo_url ?? null) : null;
-
-  const photo = formData.get("photo");
-  if (photo instanceof File && photo.size > 0) {
-    const ext = PHOTO_TYPES[photo.type];
-    if (!ext) fail("The photo must be a JPEG, PNG or WebP image.", "results");
-    if (photo.size > 8 * 1024 * 1024) fail("The photo is too large (max 8 MB).", "results");
-    const path = `${category}/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await admin.storage
-      .from("winners")
-      .upload(path, photo, { contentType: photo.type, upsert: false });
-    if (upErr) fail(`Could not upload the photo: ${upErr.message}`, "results");
-    photoUrl = admin.storage.from("winners").getPublicUrl(path).data.publicUrl;
-  }
+  // Keep existing photos only if the champion hasn't changed.
+  const same = existing?.contestant_id === contestantId;
+  const photoUrl = (await uploadPhoto(admin, category, formData.get("photo"))) ?? (same ? existing?.photo_url : null) ?? null;
+  // Duets can have a second photo (one per singer).
+  const photoUrl2 =
+    category === "duet"
+      ? ((await uploadPhoto(admin, category, formData.get("photo_2"))) ?? (same ? existing?.photo_url_2 : null) ?? null)
+      : null;
 
   const { error } = await admin.from("champions").upsert({
     category,
     contestant_id: contestantId,
     photo_url: photoUrl,
+    photo_url_2: photoUrl2,
     decided_by: me.id,
     decided_at: new Date().toISOString(),
   });
   if (error) fail(error.message, "results");
-  await audit("champion_confirm", "category", category, { contestant_id: contestantId, photo: !!photoUrl });
+  await audit("champion_confirm", "category", category, { contestant_id: contestantId, photos: [photoUrl, photoUrl2].filter(Boolean).length });
   done(`${CATEGORY_LABEL[category]} champion confirmed: ${finalist.name}.`, "results");
 }
 

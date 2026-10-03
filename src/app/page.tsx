@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     supabase.rpc("judge_count"),
     supabase.rpc("vote_total"),
     // Readable by the public only once the competition is completed.
-    supabase.from("champions").select("category, contestant_id, photo_url"),
+    supabase.from("champions").select("category, contestant_id, photo_url, photo_url_2"),
   ]);
   const votingLive = (settings.stage === "round1" || settings.stage === "final") && settings.voting_open;
 

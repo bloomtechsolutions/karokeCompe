@@ -924,11 +924,18 @@ async function ChampionsPanel({
   const supabase = await createClient();
   const [picksRes, champsRes] = await Promise.all([
     supabase.from("champion_picks").select("judge_id, category, contestant_id"),
-    supabase.from("champions").select("category, contestant_id, photo_url"),
+    supabase.from("champions").select("category, contestant_id, photo_url, photo_url_2"),
   ]);
   const picks = (picksRes.data ?? []) as { judge_id: string; category: string; contestant_id: string }[];
   const champs = new Map(
-    ((champsRes.data ?? []) as { category: string; contestant_id: string | null; photo_url: string | null }[]).map(
+    (
+      (champsRes.data ?? []) as {
+        category: string;
+        contestant_id: string | null;
+        photo_url: string | null;
+        photo_url_2: string | null;
+      }[]
+    ).map(
       (c) => [c.category, c],
     ),
   );
@@ -991,9 +998,9 @@ async function ChampionsPanel({
               </ol>
               {confirmed && (
                 <div className="flex items-center gap-3 rounded-lg bg-emerald-900/30 p-2 text-sm text-emerald-200">
-                  {champ?.photo_url && (
-                    <img src={champ.photo_url} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                  )}
+                  {[champ?.photo_url, champ?.photo_url_2].filter(Boolean).map((src) => (
+                    <img key={src} src={src!} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  ))}
                   <span className="min-w-0 flex-1">
                     Confirmed: <strong>{confirmed.name}</strong>
                     {!champ?.photo_url && <span className="block text-xs text-amber-300">No photo yet</span>}
@@ -1007,14 +1014,19 @@ async function ChampionsPanel({
                 </div>
               )}
               <ChampionForm
-                key={`${champ?.contestant_id}|${champ?.photo_url}`}
+                key={`${champ?.contestant_id}|${champ?.photo_url}|${champ?.photo_url_2}`}
                 category={category}
                 options={ranked.map((r) => ({
                   id: r.contestant_id,
+                  name: r.name,
                   label: `${r.name}${pickers(r.contestant_id).length ? ` (★${pickers(r.contestant_id).length})` : ""}`,
                 }))}
                 defaultId={defaultId}
-                currentPhoto={champ?.contestant_id === defaultId ? (champ?.photo_url ?? null) : null}
+                currentPhotos={
+                  champ?.contestant_id === defaultId
+                    ? [champ?.photo_url ?? null, champ?.photo_url_2 ?? null]
+                    : [null, null]
+                }
               />
             </div>
           );

@@ -13,7 +13,13 @@ export type StandingRow = {
 };
 
 /** The confirmed champion of a category, shown on the TV once the competition is completed. */
-export type Champion = { category: Category; contestant_id: string | null; photo_url: string | null };
+export type Champion = {
+  category: Category;
+  contestant_id: string | null;
+  photo_url: string | null;
+  /** Duets: the second singer's photo. */
+  photo_url_2?: string | null;
+};
 
 /** Final standings for one category: judges' points + audience points, ranked. */
 export function rankStandings(rows: StandingRow[], category: Category, judgeWeight: number): FinalResult[] {
