@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { getVoteLink } from "@/lib/qr";
 import { stageVoting } from "@/lib/voting";
-import { MAX_TOTAL, fmt, rankRound1 } from "@/lib/scoring";
+import { MAX_TOTAL, fmt, rankFinal, rankRound1 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
 import {
   CATEGORIES,
@@ -22,8 +22,10 @@ import {
   type Stage,
 } from "@/lib/types";
 import { logout } from "../login/actions";
+import { ChampionForm } from "./ChampionForm";
 import {
   advanceTop,
+  clearChampion,
   clearData,
   createJudge,
   deleteContestant,
@@ -143,6 +145,14 @@ export default async function AdminPage({
                 Download results (CSV)
               </a>
             </div>
+            {(settings.stage === "final" || settings.stage === "completed") && (
+              <ChampionsPanel
+                rows={rows}
+                judges={activeJudges}
+                judgeWeight={judgeWeight}
+                votingOpen={settings.voting_open}
+              />
+            )}
             <section
               className={`card flex flex-wrap items-center justify-between gap-3 ${settings.announce_r1 ? "border-gold/70" : ""}`}
             >
@@ -895,5 +905,121 @@ async function VotesTab({ contestants }: { contestants: Contestant[] }) {
         {attempts.length === 0 ? <p className="text-sm text-muted">No blocked attempts.</p> : table(attempts, true)}
       </section>
     </div>
+  );
+}
+
+/* eslint-disable @next/next/no-img-element */
+/** Judges' champion picks per category, and the organiser's confirmation with a photo. */
+async function ChampionsPanel({
+  rows,
+  judges,
+  judgeWeight,
+  votingOpen,
+}: {
+  rows: LeaderboardRow[];
+  judges: Profile[];
+  judgeWeight: number;
+  votingOpen: boolean;
+}) {
+  const supabase = await createClient();
+  const [picksRes, champsRes] = await Promise.all([
+    supabase.from("champion_picks").select("judge_id, category, contestant_id"),
+    supabase.from("champions").select("category, contestant_id, photo_url"),
+  ]);
+  const picks = (picksRes.data ?? []) as { judge_id: string; category: string; contestant_id: string }[];
+  const champs = new Map(
+    ((champsRes.data ?? []) as { category: string; contestant_id: string | null; photo_url: string | null }[]).map(
+      (c) => [c.category, c],
+    ),
+  );
+  const judgeName = new Map(judges.map((j) => [j.id, j.full_name.split(" ")[0]]));
+
+  return (
+    <section className="card space-y-4 border-gold/60">
+      <div>
+        <h2 className="text-lg font-bold">🏆 Champions</h2>
+        <p className="text-sm text-muted">
+          {votingOpen
+            ? "Close audience voting first. The judges can then pick a champion per category on their page."
+            : "The judges pick a champion per category on their page, based on the scores and votes below. Confirm each champion and upload their photo, then move the stage to Completed to reveal them on the TV."}
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {CATEGORIES.map((category) => {
+          const ranked = rankFinal(rows, category, judgeWeight);
+          if (ranked.length === 0) return null;
+          const catPicks = picks.filter((p) => p.category === category);
+          const pickers = (id: string) =>
+            catPicks.filter((p) => p.contestant_id === id).map((p) => judgeName.get(p.judge_id) ?? "Judge");
+          // Default: the judges' most-picked finalist, else the top of the standings.
+          const byPicks = [...ranked].sort((a, b) => pickers(b.contestant_id).length - pickers(a.contestant_id).length);
+          const champ = champs.get(category);
+          const defaultId =
+            champ?.contestant_id ??
+            (catPicks.length > 0 ? byPicks[0].contestant_id : ranked[0]?.contestant_id) ??
+            "";
+          const confirmed = ranked.find((r) => r.contestant_id === champ?.contestant_id);
+          return (
+            <div key={category} className="space-y-3 rounded-xl bg-bg/40 p-3">
+              <div className="flex items-baseline justify-between">
+                <h3 className="font-bold">{CATEGORY_LABEL[category]}</h3>
+                <span className="text-xs text-muted">
+                  {catPicks.length}/{judges.length} judges picked
+                </span>
+              </div>
+              <ol className="divide-y divide-line/60 text-sm">
+                {ranked.map((r) => {
+                  const who = pickers(r.contestant_id);
+                  return (
+                    <li key={r.contestant_id} className="flex items-center gap-2 py-1.5">
+                      <span className="w-5 text-center font-bold text-muted">{r.finalScore == null ? "–" : r.rank}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{r.name}</span>
+                        <span className="block text-xs text-muted tabular-nums">
+                          Judges {fmt(r.judgePoints, 1)} · 🗳 {r.votes ?? 0} = {fmt(r.audiencePoints, 1)} · total{" "}
+                          {fmt(r.finalScore, 1)}
+                        </span>
+                      </span>
+                      {who.length > 0 && (
+                        <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-xs font-semibold text-gold">
+                          ★ {who.length} · {who.join(", ")}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+              {confirmed && (
+                <div className="flex items-center gap-3 rounded-lg bg-emerald-900/30 p-2 text-sm text-emerald-200">
+                  {champ?.photo_url && (
+                    <img src={champ.photo_url} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    Confirmed: <strong>{confirmed.name}</strong>
+                    {!champ?.photo_url && <span className="block text-xs text-amber-300">No photo yet</span>}
+                  </span>
+                  <form action={clearChampion}>
+                    <input type="hidden" name="category" value={category} />
+                    <SubmitButton className="rounded-lg px-2 py-1 text-xs text-red-300 hover:bg-red-950" pendingText="…">
+                      Clear
+                    </SubmitButton>
+                  </form>
+                </div>
+              )}
+              <ChampionForm
+                key={`${champ?.contestant_id}|${champ?.photo_url}`}
+                category={category}
+                options={ranked.map((r) => ({
+                  id: r.contestant_id,
+                  label: `${r.name}${pickers(r.contestant_id).length ? ` (★${pickers(r.contestant_id).length})` : ""}`,
+                }))}
+                defaultId={defaultId}
+                currentPhoto={champ?.contestant_id === defaultId ? (champ?.photo_url ?? null) : null}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

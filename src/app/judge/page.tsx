@@ -4,10 +4,12 @@ import { StageBadge } from "@/components/StageBadge";
 import { requireJudge } from "@/lib/auth";
 import { getLeaderboard, getSettings } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORY_LABEL, type Contestant, type Score } from "@/lib/types";
+import { CATEGORIES, CATEGORY_LABEL, type Contestant, type Score } from "@/lib/types";
 import { nextInLine } from "@/lib/voting";
 import { logout } from "../login/actions";
+import { ChampionPick, type StandingView } from "./ChampionPick";
 import { ScoreCard } from "./ScoreCard";
+import { rankStandings, type StandingRow } from "@/lib/champions";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,34 @@ export default async function JudgePage() {
   // Everyone this judge has scored (except whoever is on stage), to review or change.
   const scored = queue.filter((c) => c !== current && myScores.has(c.id));
   const done = queue.filter((c) => myScores.has(c.id)).length;
+
+  // After the final's voting closes, judges choose the champions from the standings.
+  const choosing = settings.stage === "final" && !settings.voting_open;
+  const judgeWeight = Number(settings.judge_weight);
+  let champions: { category: (typeof CATEGORIES)[number]; standings: StandingView[]; current: string | null }[] = [];
+  if (choosing) {
+    const [standingsRes, picksRes] = await Promise.all([
+      supabase.rpc("final_standings"),
+      supabase.from("champion_picks").select("category, contestant_id").eq("judge_id", judge.id),
+    ]);
+    const rows = (standingsRes.data ?? []) as StandingRow[];
+    const picks = new Map(
+      ((picksRes.data ?? []) as { category: string; contestant_id: string }[]).map((p) => [p.category, p.contestant_id]),
+    );
+    champions = CATEGORIES.map((category) => ({
+      category,
+      current: picks.get(category) ?? null,
+      standings: rankStandings(rows, category, judgeWeight).map((r) => ({
+        id: r.contestant_id,
+        name: r.name,
+        rank: r.rank,
+        judgePoints: r.judgePoints,
+        votes: r.votes ?? 0,
+        audiencePoints: r.audiencePoints,
+        total: r.finalScore,
+      })),
+    })).filter((c) => c.standings.length > 0);
+  }
 
   const songOf = (c: Contestant) => (round === "final" ? c.song_final : c.song_round1);
   const orderLabel = (c: Contestant) => (round === "final" ? c.final_order : c.performance_order);
@@ -84,6 +114,26 @@ export default async function JudgePage() {
           <p className="card text-center text-sm text-muted">No performers in this round yet.</p>
         ) : (
           <>
+            {choosing && champions.length > 0 && (
+              <section className="space-y-3">
+                <div className="rounded-xl border border-gold/50 bg-gold/10 px-4 py-3">
+                  <h2 className="font-bold text-gold">🏆 Choose the champions</h2>
+                  <p className="text-sm text-muted">
+                    Voting has closed. Based on the judges&apos; scores and the audience votes below, pick one champion
+                    in each category. The organiser confirms the champions before they are announced.
+                  </p>
+                </div>
+                {champions.map((c) => (
+                  <ChampionPick
+                    key={c.category}
+                    category={c.category}
+                    standings={c.standings}
+                    current={c.current}
+                    judgeWeight={judgeWeight}
+                  />
+                ))}
+              </section>
+            )}
             {current ? (
               <ScoreCard
                 key={`${current.id}-${round}`}

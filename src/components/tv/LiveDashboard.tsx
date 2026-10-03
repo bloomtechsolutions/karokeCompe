@@ -1,10 +1,12 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { rankFinal, rankRound1, toJudgePoints } from "@/lib/scoring";
 import { CATEGORIES, CATEGORY_LABEL, STAGE_LABEL, type Category, type LeaderboardRow, type Stage } from "@/lib/types";
 import { AnimatedNumber } from "./AnimatedNumber";
+import type { Champion as ConfirmedChampion } from "@/lib/champions";
 import { AutoScroll } from "./AutoScroll";
 import { FinalBoard, JudgeDots, Round1Board } from "./Boards";
 import { activeFinalCategories, nextInLine, stageVoting } from "@/lib/voting";
@@ -27,6 +29,8 @@ export type DashboardProps = {
   judgeCount: number;
   voteTotal: number;
   vote: { url: string; svg: string } | null;
+  /** Champions confirmed by the organiser (only visible once completed). */
+  champions?: ConfirmedChampion[];
 };
 
 export function LiveDashboard(props: DashboardProps) {
@@ -132,7 +136,7 @@ export function LiveDashboard(props: DashboardProps) {
 
         {stage === "completed" &&
           (showScores ? (
-            <Winners rows={rows} judgeWeight={props.judgeWeight} />
+            <Winners rows={rows} judgeWeight={props.judgeWeight} champions={props.champions ?? []} />
           ) : (
             <Hero title="Results coming soon" subtitle="Stay tuned for the winners!" />
           ))}
@@ -468,48 +472,53 @@ function Confetti() {
   );
 }
 
-/** The one winner of a category (more than one only on an exact tie). */
+/** A category's champion: the one the organiser confirmed (chosen by the judges), with their photo. */
 function Champion({
   category,
   rows,
   judgeWeight,
+  confirmed,
   delay,
 }: {
   category: Category;
   rows: LeaderboardRow[];
   judgeWeight: number;
+  confirmed: ConfirmedChampion | undefined;
   delay: number;
 }) {
-  const ranked = rankFinal(rows, category, judgeWeight).filter((r) => r.finalScore != null);
-  const winners = ranked.filter((r) => r.rank === 1);
+  const ranked = rankFinal(rows, category, judgeWeight);
+  // Fall back to the top of the standings if no champion has been confirmed.
+  const winner = confirmed?.contestant_id
+    ? ranked.find((r) => r.contestant_id === confirmed.contestant_id)
+    : ranked.find((r) => r.finalScore != null && r.rank === 1);
+  const photo = confirmed?.contestant_id === winner?.contestant_id ? confirmed?.photo_url : null;
 
   return (
-    <section className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-gold/60 bg-gradient-to-b from-gold/15 via-panel/70 to-panel/80 p-[1.6rem] text-center">
+    <section className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-gold/60 bg-gradient-to-b from-gold/15 via-panel/70 to-panel/80 p-[1.4rem] text-center">
       <div aria-hidden className="halo absolute top-1/2 left-1/2 h-[70%] w-[70%] -translate-x-1/2 -translate-y-1/2 opacity-60" />
-      <h2 className="relative text-[1.6rem] font-extrabold tracking-[0.3em] text-muted uppercase">
-        {CATEGORY_LABEL[category]} Winner
+      <h2 className="relative text-[1.6rem] font-extrabold tracking-[0.3em] text-gold uppercase">
+        {CATEGORY_LABEL[category]} Champion
       </h2>
-      {winners.length === 0 ? (
-        <p className="relative py-[3rem] text-[1.3rem] text-muted">No final results.</p>
+      {!winner ? (
+        <p className="relative py-[3rem] text-[1.3rem] text-muted">To be announced…</p>
       ) : (
-        winners.map((w, i) => (
-          <div
-            key={w.contestant_id}
-            className="pop-in relative mt-[1rem] flex flex-col items-center"
-            style={{ animationDelay: `${delay + i * 400}ms` }}
-          >
-            <div className="text-[clamp(3.5rem,10dvh,6rem)] leading-none drop-shadow-[0_0_25px_rgb(242_196_109/0.7)]">👑</div>
-            <div className="shine-text mt-[0.6rem] text-[clamp(2.4rem,6.5dvh,4.6rem)] leading-[1.05] font-extrabold text-balance">
-              {w.name}
+        <div className="pop-in relative mt-[1rem] flex min-h-0 flex-col items-center" style={{ animationDelay: `${delay}ms` }}>
+          {photo ? (
+            <div className="glow-pulse rounded-[2rem] bg-gradient-to-br from-gold via-accent-2 to-gold p-[0.35rem]">
+              <img
+                src={photo}
+                alt={winner.name}
+                className="h-[clamp(11rem,42dvh,26rem)] w-auto max-w-[min(30rem,38vw)] rounded-[1.7rem] object-cover"
+              />
             </div>
-            {w.department && <div className="mt-[0.4rem] text-[1.3rem] text-muted">{w.department}</div>}
-            {w.song_final && <div className="mt-[0.3rem] text-[1.2rem] text-muted">♪ {w.song_final}</div>}
-            <div className="mt-[1.2rem] rounded-full border border-gold/60 bg-bg/60 px-[1.6rem] py-[0.5rem] text-[2.2rem] font-extrabold text-gold tabular-nums">
-              <AnimatedNumber value={w.finalScore ?? 0} duration={2200} />
-              <span className="ml-2 text-[1.1rem] font-semibold text-muted">points</span>
-            </div>
+          ) : (
+            <LogoOrb size="clamp(7rem, 22dvh, 12rem)" minimal />
+          )}
+          <div className="shine-text mt-[1rem] text-[clamp(2.2rem,6dvh,4.2rem)] leading-[1.05] font-extrabold text-balance">
+            {winner.name}
           </div>
-        ))
+          {winner.department && <div className="mt-[0.3rem] text-[1.2rem] text-muted">{winner.department}</div>}
+        </div>
       )}
     </section>
   );
@@ -593,7 +602,15 @@ function AutoScrollList({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Winners({ rows, judgeWeight }: { rows: LeaderboardRow[]; judgeWeight: number }) {
+function Winners({
+  rows,
+  judgeWeight,
+  champions,
+}: {
+  rows: LeaderboardRow[];
+  judgeWeight: number;
+  champions: ConfirmedChampion[];
+}) {
   return (
     <>
       <Confetti />
@@ -604,7 +621,14 @@ function Winners({ rows, judgeWeight }: { rows: LeaderboardRow[]; judgeWeight: n
         </div>
         <div className="mt-[1.5rem] grid min-h-0 flex-1 gap-[1.5rem] lg:grid-cols-2">
           {CATEGORIES.map((c, i) => (
-            <Champion key={c} category={c} rows={rows} judgeWeight={judgeWeight} delay={600 + i * 900} />
+            <Champion
+              key={c}
+              category={c}
+              rows={rows}
+              judgeWeight={judgeWeight}
+              confirmed={champions.find((x) => x.category === c)}
+              delay={600 + i * 900}
+            />
           ))}
         </div>
       </div>

@@ -57,7 +57,13 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
   - To show a *Now on stage* spotlight, use **Live control → On stage** (or **Next performer ▶**) in the admin panel.
   - The spotlight fills in a dot as each judge submits, and reveals the judges' score once all of them have scored.
 - **Final** – only the category being performed or voted on is shown (both at the start and end). With voting open: a large QR code, the total votes cast, and each finalist's live vote count.
-- **Completed** – one champion per category (Solo winner and Duet winner) with confetti. Moving to *Completed* turns on *Show scores* so the winners appear.
+- **Completed** – the Solo champion and Duet champion, each with their photo, and confetti.
+
+## Choosing the champions
+
+1. After the last finalist, **close voting**. Each judge's page then shows the final standings (judges' points + audience votes) and they **pick a champion** in each category.
+2. In *Admin → Results → Champions* you see each judge's pick, **confirm the champion** of each category (the judges' most-picked finalist is preselected) and **upload their photo** (resized in the browser).
+3. Move the stage to **Completed**: the TV reveals both champions with their photos. Champions stay hidden from the public until then.
 
 ## Security
 

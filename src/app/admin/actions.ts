@@ -7,7 +7,7 @@ import { getLeaderboard, getSettings } from "@/lib/data";
 import { rankRound1 } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { CATEGORIES, finalistsFor, type Category, type Stage } from "@/lib/types";
+import { CATEGORIES, CATEGORY_LABEL, finalistsFor, type Category, type Stage } from "@/lib/types";
 
 const STAGES: Stage[] = ["setup", "round1", "final", "completed"];
 
@@ -352,4 +352,70 @@ export async function clearData(formData: FormData) {
   await audit("clear_data", "competition", null, { what });
   const label = what === "all" ? "scores and votes" : what === "staff" ? "the checked-in staff list" : what;
   done(`Cleared ${label}.`, "settings");
+}
+
+// ---------------------------------------------------------------------------
+// Champions (chosen by the judges, confirmed by the organiser, with a photo)
+// ---------------------------------------------------------------------------
+
+const PHOTO_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+export async function saveChampion(formData: FormData) {
+  const me = await requireAdmin();
+  const category = str(formData, "category") as Category;
+  if (!CATEGORIES.includes(category)) fail("Invalid category.", "results");
+  const contestantId = str(formData, "contestant_id");
+  if (!contestantId) fail("Choose the champion.", "results");
+
+  const admin = createAdminClient();
+  const { data: finalist } = await admin
+    .from("contestants")
+    .select("id, name")
+    .eq("id", contestantId)
+    .eq("category", category)
+    .eq("is_finalist", true)
+    .maybeSingle();
+  if (!finalist) fail("The champion must be a finalist in this category.", "results");
+
+  const { data: existing } = await admin
+    .from("champions")
+    .select("contestant_id, photo_url")
+    .eq("category", category)
+    .maybeSingle();
+  // Keep the photo only if the champion hasn't changed.
+  let photoUrl: string | null = existing?.contestant_id === contestantId ? (existing?.photo_url ?? null) : null;
+
+  const photo = formData.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    const ext = PHOTO_TYPES[photo.type];
+    if (!ext) fail("The photo must be a JPEG, PNG or WebP image.", "results");
+    if (photo.size > 8 * 1024 * 1024) fail("The photo is too large (max 8 MB).", "results");
+    const path = `${category}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await admin.storage
+      .from("winners")
+      .upload(path, photo, { contentType: photo.type, upsert: false });
+    if (upErr) fail(`Could not upload the photo: ${upErr.message}`, "results");
+    photoUrl = admin.storage.from("winners").getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await admin.from("champions").upsert({
+    category,
+    contestant_id: contestantId,
+    photo_url: photoUrl,
+    decided_by: me.id,
+    decided_at: new Date().toISOString(),
+  });
+  if (error) fail(error.message, "results");
+  await audit("champion_confirm", "category", category, { contestant_id: contestantId, photo: !!photoUrl });
+  done(`${CATEGORY_LABEL[category]} champion confirmed: ${finalist.name}.`, "results");
+}
+
+export async function clearChampion(formData: FormData) {
+  await requireAdmin();
+  const category = str(formData, "category") as Category;
+  if (!CATEGORIES.includes(category)) fail("Invalid category.", "results");
+  const { error } = await createAdminClient().from("champions").delete().eq("category", category);
+  if (error) fail(error.message, "results");
+  await audit("champion_clear", "category", category);
+  done(`${CATEGORY_LABEL[category]} champion cleared.`, "results");
 }

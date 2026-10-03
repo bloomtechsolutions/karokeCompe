@@ -49,3 +49,32 @@ export async function saveScore(_prev: SaveScoreState, formData: FormData): Prom
   const total = CRITERIA.reduce((sum, c) => sum + values[c.key], 0);
   return { ok: true, total, savedAt: Date.now() };
 }
+
+export type PickState = { ok?: boolean; error?: string };
+
+/** A judge's choice of champion for a category (after the final, once voting is closed). */
+export async function pickChampion(_prev: PickState, formData: FormData): Promise<PickState> {
+  const judge = await requireJudge();
+  const category = String(formData.get("category") ?? "");
+  const contestantId = String(formData.get("contestant_id") ?? "");
+  if ((category !== "solo" && category !== "duet") || !contestantId) return { error: "Choose a finalist." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("champion_picks")
+    .upsert(
+      { judge_id: judge.id, category, contestant_id: contestantId, updated_at: new Date().toISOString() },
+      { onConflict: "judge_id,category" },
+    );
+  if (error) {
+    return {
+      error:
+        error.code === "42501"
+          ? "Champions can be chosen once audience voting has closed."
+          : `Could not save: ${error.message}`,
+    };
+  }
+  revalidatePath("/judge");
+  revalidatePath("/admin");
+  return { ok: true };
+}

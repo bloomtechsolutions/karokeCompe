@@ -40,12 +40,19 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
   const me = await requireHost();
   const { err } = await searchParams;
   const supabase = await createClient();
-  const [settings, rows, judgeCountRes, voteTotalRes] = await Promise.all([
+  const [settings, rows, judgeCountRes, voteTotalRes, champsRes] = await Promise.all([
     getSettings(),
     getLeaderboard(),
     supabase.rpc("judge_count"),
     supabase.rpc("vote_total"),
+    supabase.from("champions").select("category, contestant_id"),
   ]);
+  const confirmedChampion = new Map(
+    ((champsRes.data ?? []) as { category: string; contestant_id: string | null }[]).map((c) => [
+      c.category,
+      c.contestant_id,
+    ]),
+  );
   const judgeCount = (judgeCountRes.data as number | null) ?? 0;
   const voteTotal = (voteTotalRes.data as number | null) ?? 0;
   const judgeWeight = Number(settings.judge_weight);
@@ -312,16 +319,19 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
           <Section title="Announce the winners">
             <p className="text-sm text-muted">One winner in each category. The TV reveals them when you say the name.</p>
             <Script label="Build-up">
-              Our judges have scored, and you, the audience, have voted. It&apos;s time to crown tonight&apos;s champions!
+              Our judges have scored, you, the audience, have voted, and our judges have made their decision. It&apos;s time to
+              reveal tonight&apos;s champions!
             </Script>
             {CATEGORIES.map((c) => {
-              const winners = rankFinal(rows, c, judgeWeight).filter((r) => r.finalScore != null && r.rank === 1);
+              const ranked = rankFinal(rows, c, judgeWeight);
+              // The champion the judges chose and the organiser confirmed; otherwise the top of the standings.
+              const confirmed = ranked.find((r) => r.contestant_id === confirmedChampion.get(c));
+              const winners = confirmed ? [confirmed] : ranked.filter((r) => r.finalScore != null && r.rank === 1);
               if (winners.length === 0) return null;
               return (
                 <Script key={c} label={`${CATEGORY_LABEL[c]} winner`}>
-                  And the winner of the {CATEGORY_LABEL[c].toLowerCase()} category, with{" "}
-                  <strong>{fmt(winners[0].finalScore, 1)}</strong> points, is…{" "}
-                  <strong>{winners.map((w) => w.name).join(" and ")}</strong>!
+                  And the {CATEGORY_LABEL[c].toLowerCase()} champion of the {settings.event_name}, chosen by our
+                  judges, is… <strong>{winners.map((w) => w.name).join(" and ")}</strong>!
                 </Script>
               );
             })}
