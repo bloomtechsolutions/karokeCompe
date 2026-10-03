@@ -488,7 +488,7 @@ async function ControlTab({
           ))}
         </div>
         <p className="text-xs text-muted">
-          Judges can only score the round that is currently live. Moving to the Final locks 1st-round scores.
+          Judges can only score the round that is currently live. Moving to the Final locks 1st-round scores. Moving to Completed closes voting, turns on scores and shows the winners on the TV.
         </p>
         {(stage === "round1" || stage === "final") && (
           <div className="rounded-lg bg-bg/50 p-3 text-sm">

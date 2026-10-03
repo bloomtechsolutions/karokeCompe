@@ -57,7 +57,7 @@ Open `/` in the TV's browser and press **F** (or the Fullscreen button). The cur
   - To show a *Now on stage* spotlight, use **Live control → On stage** (or **Next performer ▶**) in the admin panel.
   - The spotlight fills in a dot as each judge submits, and reveals the judges' score once all of them have scored.
 - **Final** – only the category being performed or voted on is shown (both at the start and end). With voting open: a large QR code, the total votes cast, and each finalist's live vote count.
-- **Completed** – winners' podiums with confetti.
+- **Completed** – one champion per category (Solo winner and Duet winner) with confetti. Moving to *Completed* turns on *Show scores* so the winners appear.
 
 ## Security
 

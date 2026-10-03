@@ -468,40 +468,48 @@ function Confetti() {
   );
 }
 
-function Podium({ category, rows, judgeWeight }: { category: Category; rows: LeaderboardRow[]; judgeWeight: number }) {
-  const top = rankFinal(rows, category, judgeWeight).filter((r) => r.finalScore != null).slice(0, 3);
-  const order = [top[1], top[0], top[2]];
-  const heights = ["h-[9rem]", "h-[13rem]", "h-[6.5rem]"];
-  const places = [2, 1, 3];
-  const colors = ["from-zinc-300 to-zinc-500", "from-gold to-amber-600", "from-amber-600 to-amber-800"];
+/** The one winner of a category (more than one only on an exact tie). */
+function Champion({
+  category,
+  rows,
+  judgeWeight,
+  delay,
+}: {
+  category: Category;
+  rows: LeaderboardRow[];
+  judgeWeight: number;
+  delay: number;
+}) {
+  const ranked = rankFinal(rows, category, judgeWeight).filter((r) => r.finalScore != null);
+  const winners = ranked.filter((r) => r.rank === 1);
 
   return (
-    <section className="flex min-h-0 flex-col rounded-3xl border border-line/70 bg-panel/60 p-[1.4rem]">
-      <h2 className="text-center text-[2rem] font-extrabold tracking-wide uppercase">{CATEGORY_LABEL[category]}</h2>
-      {top.length === 0 ? (
-        <p className="py-[3rem] text-center text-muted">No final results.</p>
+    <section className="relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-gold/60 bg-gradient-to-b from-gold/15 via-panel/70 to-panel/80 p-[1.6rem] text-center">
+      <div aria-hidden className="halo absolute top-1/2 left-1/2 h-[70%] w-[70%] -translate-x-1/2 -translate-y-1/2 opacity-60" />
+      <h2 className="relative text-[1.6rem] font-extrabold tracking-[0.3em] text-muted uppercase">
+        {CATEGORY_LABEL[category]} Winner
+      </h2>
+      {winners.length === 0 ? (
+        <p className="relative py-[3rem] text-[1.3rem] text-muted">No final results.</p>
       ) : (
-        <div className="mt-auto grid grid-cols-3 items-end gap-[1rem] pt-[1.5rem]">
-          {order.map((r, i) => (
-            <div key={i} className="flex flex-col items-center text-center">
-              {r && (
-                <div className="pop-in mb-[0.6rem]" style={{ animationDelay: `${600 + (2 - i) * 300}ms` }}>
-                  {places[i] === 1 && <div className="text-[3rem] leading-none">👑</div>}
-                  <div className={`font-extrabold ${places[i] === 1 ? "text-[1.8rem]" : "text-[1.3rem]"}`}>{r.name}</div>
-                  <div className="text-[1.1rem] font-bold text-gold tabular-nums">
-                    <AnimatedNumber value={r.finalScore ?? 0} duration={2000} />
-                  </div>
-                </div>
-              )}
-              <div
-                className={`podium-rise flex w-full items-start justify-center rounded-t-2xl bg-gradient-to-b pt-[0.6rem] text-[2.6rem] font-extrabold text-bg ${heights[i]} ${colors[i]}`}
-                style={{ animationDelay: `${(2 - i) * 200}ms` }}
-              >
-                {r ? places[i] : ""}
-              </div>
+        winners.map((w, i) => (
+          <div
+            key={w.contestant_id}
+            className="pop-in relative mt-[1rem] flex flex-col items-center"
+            style={{ animationDelay: `${delay + i * 400}ms` }}
+          >
+            <div className="text-[clamp(3.5rem,10dvh,6rem)] leading-none drop-shadow-[0_0_25px_rgb(242_196_109/0.7)]">👑</div>
+            <div className="shine-text mt-[0.6rem] text-[clamp(2.4rem,6.5dvh,4.6rem)] leading-[1.05] font-extrabold text-balance">
+              {w.name}
             </div>
-          ))}
-        </div>
+            {w.department && <div className="mt-[0.4rem] text-[1.3rem] text-muted">{w.department}</div>}
+            {w.song_final && <div className="mt-[0.3rem] text-[1.2rem] text-muted">♪ {w.song_final}</div>}
+            <div className="mt-[1.2rem] rounded-full border border-gold/60 bg-bg/60 px-[1.6rem] py-[0.5rem] text-[2.2rem] font-extrabold text-gold tabular-nums">
+              <AnimatedNumber value={w.finalScore ?? 0} duration={2200} />
+              <span className="ml-2 text-[1.1rem] font-semibold text-muted">points</span>
+            </div>
+          </div>
+        ))
       )}
     </section>
   );
@@ -592,11 +600,11 @@ function Winners({ rows, judgeWeight }: { rows: LeaderboardRow[]; judgeWeight: n
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <div className="pop-in text-center">
           <div className="font-script text-[4.5rem] leading-none text-accent-2">Congratulations</div>
-          <div className="text-[1.2rem] tracking-[0.4em] text-muted uppercase">to our winners</div>
+          <div className="text-[1.2rem] tracking-[0.4em] text-muted uppercase">to our champions</div>
         </div>
         <div className="mt-[1.5rem] grid min-h-0 flex-1 gap-[1.5rem] lg:grid-cols-2">
-          {CATEGORIES.map((c) => (
-            <Podium key={c} category={c} rows={rows} judgeWeight={judgeWeight} />
+          {CATEGORIES.map((c, i) => (
+            <Champion key={c} category={c} rows={rows} judgeWeight={judgeWeight} delay={600 + i * 900} />
           ))}
         </div>
       </div>

@@ -56,9 +56,17 @@ export async function setStage(formData: FormData) {
   // Starting a round arms audience voting. In round 1 each category opens as
   // soon as its first performer is on stage; in the final, once all its
   // finalists have performed. It stays open until the organiser closes it.
-  const patch: { stage: Stage; voting_open: boolean; now_performing: null; announce_r1: false } = {
+  const patch: {
+    stage: Stage;
+    voting_open: boolean;
+    now_performing: null;
+    announce_r1: false;
+    show_scores?: true;
+  } = {
     stage,
     announce_r1: false,
+    // Completing the competition is the reveal: the TV needs scores to show the winners.
+    ...(stage === "completed" ? { show_scores: true as const } : {}),
     voting_open: stage === "round1" || stage === "final",
     now_performing: null,
   };

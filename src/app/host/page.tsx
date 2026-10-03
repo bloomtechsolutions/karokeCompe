@@ -310,31 +310,19 @@ export default async function HostPage({ searchParams }: { searchParams: Promise
         {/* ---------------- Winners ---------------- */}
         {stage === "completed" && (
           <Section title="Announce the winners">
-            <p className="text-sm text-muted">Read each category from third place up to the winner.</p>
+            <p className="text-sm text-muted">One winner in each category. The TV reveals them when you say the name.</p>
+            <Script label="Build-up">
+              Our judges have scored, and you, the audience, have voted. It&apos;s time to crown tonight&apos;s champions!
+            </Script>
             {CATEGORIES.map((c) => {
-              const top = rankFinal(rows, c, judgeWeight).filter((r) => r.finalScore != null).slice(0, 3);
-              if (top.length === 0) return null;
-              const [first, second, third] = top;
+              const winners = rankFinal(rows, c, judgeWeight).filter((r) => r.finalScore != null && r.rank === 1);
+              if (winners.length === 0) return null;
               return (
-                <div key={c} className="space-y-2">
-                  <div className="font-bold">{CATEGORY_LABEL[c]}</div>
-                  {third && (
-                    <Script label="3rd place">
-                      In third place, with <strong>{fmt(third.finalScore, 1)}</strong> points… <strong>{third.name}</strong>!
-                    </Script>
-                  )}
-                  {second && (
-                    <Script label="2nd place">
-                      In second place, with <strong>{fmt(second.finalScore, 1)}</strong> points… <strong>{second.name}</strong>!
-                    </Script>
-                  )}
-                  {first && (
-                    <Script label="Winner">
-                      And the winner of the {CATEGORY_LABEL[c].toLowerCase()} category, with{" "}
-                      <strong>{fmt(first.finalScore, 1)}</strong> points, is… <strong>{first.name}</strong>!
-                    </Script>
-                  )}
-                </div>
+                <Script key={c} label={`${CATEGORY_LABEL[c]} winner`}>
+                  And the winner of the {CATEGORY_LABEL[c].toLowerCase()} category, with{" "}
+                  <strong>{fmt(winners[0].finalScore, 1)}</strong> points, is…{" "}
+                  <strong>{winners.map((w) => w.name).join(" and ")}</strong>!
+                </Script>
               );
             })}
             <Script label="Closing">
